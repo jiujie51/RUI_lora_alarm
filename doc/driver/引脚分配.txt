@@ -1,0 +1,67 @@
+1、P0.24/I2C_SDA_2 引脚 连接 电源芯片使能引脚，用于输出VDD5电压给 LED供电
+2、P0.02/QSPI_DIO3 引脚 连接 R5和 R4,R5另外一端是VBAT,VBAT电压为3.6v, R4另外一段是GND
+3、P0.09/NFC1  引脚 连接 R1，R1另外一端连接Q1 8050 基极和R2,R2另外一端连接GND，Q1发射极连接GND，Q1集电极连接BUZZ, BUZZ另外一端连接R3，R3另外一端连接VDD5
+4、P0.15/UART2_RX 引脚 连接 第一个LED灯珠GL5050RGB01H-T的Din
+
+
+# 芯片引脚功能说明（按引脚序号1~44）
+## 左侧引脚（1~22）
+1. **VBUS**：USB总线供电输入
+2. **USB-**：USB差分信号负极
+3. **USB+**：USB差分信号正极
+4. **P0.13/I2C_SDA**：通用IO P0.13，I2C总线数据脚；外接标识`beer_c`
+5. **P0.14/I2C_SCL**：通用IO P0.14，I2C总线时钟脚；外接标识`moto c`
+6. **P0.15/UART2_RX**：通用IO P0.15，串口2接收脚；外接`12501_TXD`
+7. **P0.16/UART2_TX**：通用IO P0.16，串口2发送脚；外接`12501_RXD`
+8. **P0.17/UART2_DE**：通用IO P0.17，串口2驱动使能；外接`12501_1PPS`
+9. **P0.19/UART1_RX**：通用IO P0.19，串口1接收脚；外接`12501_RESET`
+10. **P0.20/UART1_TX**：通用IO P0.20，串口1发送脚
+11. **P0.21/UART1_DE**：通用IO P0.21，串口1驱动使能
+12. **P0.10/NFC2**：通用IO P0.10，NFC2功能脚；外接`5V_DC_IN`
+13. **P0.09/NFC1**：通用IO P0.09，NFC1功能脚
+14. **GND**：电源地
+15. **RF_BT**：蓝牙射频引脚
+16. **GND**：电源地
+17. **NRF_RESET**：nRF模块复位控制脚
+18. **SDCLK**：SD卡时钟信号
+19. **SDIO**：SD卡数据信号
+20. **3.3V**：3.3V电源输出
+21. **VBAT_SX**：备用电池供电输入
+22. **VBAT_IO_SX**：外设IO备用电池供电；搭配C16、C25滤波电容接地
+
+## 右侧引脚（23~44）
+23. **P0.24/I2C_SDA_2**：通用IO P0.24，第二路I2C数据；外接`k1_red`（红色按键）
+24. **P0.25/I2C_SCL_2**：通用IO P0.25，第二路I2C时钟；外接`k2_green`（绿色按键）
+25. **P1.01/SW1**：通用IO P1.01，按键1；外接`k3_blue`（蓝色按键）
+26. **P1.02/SW2**：通用IO P1.02，按键2；外接`k4_yellow`（黄色按键）
+27. **P1.03/LED1**：通用IO P1.03，LED1；外接`LED_B`（蓝色LED）
+28. **P1.04/LED2**：通用IO P1.04，LED2；外接`LED_G`（绿色LED）
+29. **P0.03/QSPI_CLK**：通用IO P0.03，四线SPI时钟；外接`LED_R`（红色LED）
+30. **P0.02/QSPI_DIO3**：通用IO P0.02，四线SPI数据3；外接`BAT_DEC`（电池分压检测）
+31. **P0.28/QSPI_DIO2**：通用IO P0.28，四线SPI数据2；外接`OLED_RES`（OLED复位）
+32. **P0.29/QSPI_DIO1**：通用IO P0.29，四线SPI数据1；外接`OLED_SDA`（OLED数据）
+33. **P0.30/QSPI_DIO0**：通用IO P0.30，四线SPI数据0；外接`OLED_SCL`（OLED时钟）
+34. **P0.26/QSPI_CS**：通用IO P0.26，四线SPI片选；外接`OLED_POWER`（OLED供电控制）
+35. **GND**：电源地
+36. **RF_LORa**：LoRa射频引脚
+37. **GND**：电源地
+38. **GND**：电源地
+39. **P0.31/AIN7**：通用IO P0.31，7路模拟输入
+40. **P0.05/AIN3**：通用IO P0.05，3路模拟输入
+41. **P0.04/AIN2**：通用IO P0.04，2路模拟输入
+42. **GND**：电源地
+43. **VDD_NRF**：nRF模块主电源，搭配C26、C27滤波电容接地
+44. **VBAT_NRF**：nRF模块备用电池供电
+
+# 外设信号汇总
+1. 定位模块12501：TXD(P6)、RXD(P7)、1PPS(P8)、RESET(P9)
+2. 三色按键：红k1(P23)、绿k2(P24)、蓝k3(P25)、黄k4(P26)
+3. RGB指示灯：R(P29)、G(P28)、B(P27) 都输出PWM
+4. OLED显示屏：电源(P34)、SCL(P33)、SDA(P32)、复位(P31)
+5. 模拟检测：电池分压BAT_DEC(P30)、5V输入检测(P12)
+7. 射频接口：蓝牙RF_BT(P15)、LoRa RF_LORa(P36)
+8. 电源网络：USB供电VBUS(P1)、3.3V输出(P20)、电池VBAT_SX(P21)/VBAT_IO_SX(P22)/VBAT_NRF(P44)、模块主电VDD_NRF(P43)
+9. I2C总线：
+   - 一路I2C：SDA(P4 beer_c)、SCL(P5 moto c)
+   - 二路I2C：SDA2(P23)、SCL2(P24)
+10. P4 beer_c、P5 moto c 都输出PWM

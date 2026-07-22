@@ -1,0 +1,303 @@
+root@RAK7289CV2:~# logread -f
+Wed Jul 15 11:53:01 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:53:02 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:53:03 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:53:04 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:53:04 2026 user.debug basicstation[6603]: [GPS:VERB] Time sync rejected: quality=1212 threshold=976
+Wed Jul 15 11:53:04 2026 user.debug basicstation[6603]: [AIO:DEBU] [12|WS] > {"msgtype":"jreq","MHdr":0,"JoinEui":"B6-AC-3C-87-00-67-7D-D6","DevEui":"20-26-06-18-00-00-00-01","DevNonce":1839,"MIC":1142515968,"RefTime":1784116384.389240,"DR":0,"Freq":904500000,"upinfo":{"rctx":0,"xtime":66146671890223392,"gpstime":0,"fts":-1,"rssi":-40,"snr":12.5,"rxtime":1784116384.648163}}
+Wed Jul 15 11:53:04 2026 user.info basicstation[6603]: [RAL:INFO] RX mod=LORA f=904500000 bw=125 sz=23 dr=10 ch=r0i3 00D67D6700873CACB601000000180626202F0700691944
+Wed Jul 15 11:53:04 2026 user.debug basicstation[6603]: [LOG:DEBU] rrd_statistic_up-362 uplinkTqByAirtime: dr=0, timeonair=370, tm=1784116384
+Wed Jul 15 11:53:04 2026 user.debug basicstation[6603]: [LOG:DEBU] rrd_statistic_up-364 uplinkTqByPkt: dr=0, tm=1784116384
+Wed Jul 15 11:53:04 2026 user.debug basicstation[6603]: [LOG:DEBU] rrd_statistic_up-366 ChanBusyByAirtime: chan=3, timeonair=0, tm=370
+Wed Jul 15 11:53:04 2026 user.debug basicstation[6723]: [S00:DEBU] [CRC FAIL] 905.300MHz -15.50/-108.7 SF10/BW125 (mod=16/dr=10/bw=4) xtick=31176119 (823615769) 23 bytes: 00567DC700879C6C366FC628B1CBDED544296B64690FCE
+Wed Jul 15 11:53:05 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:53:05 2026 user.debug basicstation[6603]: [AIO:DEBU] [12|WS] < {"msgtype":"dnmsg","DevEui":"01-01-01-01-01-01-01-01","dC":0,"diid":3295113832,"pdu":"20d02ab631e28b0abaa1d2784fc1a92083d48e5a660e6aa7dacae616593daf1c64","priority":1,"RxDelay":5,"RX1DR":10,"RX1Freq":925100000,"RX2DR":8,"RX2Freq":923300000,"xtime":66146671890223392,"rctx":0,"MuxTime":1784116385.149064}
+Wed Jul 15 11:53:05 2026 user.err basicstation[6603]: [S2E:ERRO] Parsing of JSON message failed - ignored
+Wed Jul 15 11:53:06 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:53:07 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:53:08 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:53:09 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:53:10 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:53:11 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:53:12 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:53:13 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:53:14 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:53:15 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:53:16 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:53:17 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:53:18 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:53:19 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:53:20 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:53:21 2026 user.debug basicstation[6603]: [AIO:DEBU] [12|WS] > {"msgtype":"jreq","MHdr":0,"JoinEui":"B6-AC-3C-87-00-67-7D-D6","DevEui":"20-26-06-18-00-00-00-01","DevNonce":1840,"MIC":789041327,"RefTime":1784116400.965486,"DR":0,"Freq":905100000,"upinfo":{"rctx":0,"xtime":66146671906728317,"gpstime":0,"fts":-1,"rssi":-106,"snr":-8.75,"rxtime":1784116401.159805}}
+Wed Jul 15 11:53:21 2026 user.info basicstation[6603]: [RAL:INFO] RX mod=LORA f=905100000 bw=125 sz=23 dr=10 ch=r1i6 00D67D6700873CACB601000000180626203007AFD0072F
+Wed Jul 15 11:53:21 2026 user.debug basicstation[6603]: [LOG:DEBU] rrd_statistic_up-362 uplinkTqByAirtime: dr=0, timeonair=370, tm=1784116401
+Wed Jul 15 11:53:21 2026 user.debug basicstation[6603]: [LOG:DEBU] rrd_statistic_up-364 uplinkTqByPkt: dr=0, tm=1784116401
+Wed Jul 15 11:53:21 2026 user.debug basicstation[6723]: [S00:DEBU] [CRC FAIL] 904.900MHz -14.75/-109.7 SF10/BW125 (mod=16/dr=10/bw=4) xtick=32133979 (840120697) 23 bytes: 00F60D6D02878E4EB26DD629A3E39CC43440C8F2D58FEC
+Wed Jul 15 11:53:21 2026 user.debug basicstation[6603]: [LOG:DEBU] rrd_statistic_up-366 ChanBusyByAirtime: chan=6, timeonair=0, tm=370
+Wed Jul 15 11:53:21 2026 user.debug basicstation[6603]: [AIO:DEBU] [12|WS] > {"msgtype":"jreq","MHdr":0,"JoinEui":"B6-AC-3C-87-00-67-7D-D6","DevEui":"20-26-06-18-00-00-00-01","DevNonce":1840,"MIC":789041327,"RefTime":1784116400.974587,"DR":0,"Freq":904100000,"upinfo":{"rctx":0,"xtime":66146671906728321,"gpstime":0,"fts":-1,"rssi":-41,"snr":14,"rxtime":1784116401.168905}}
+Wed Jul 15 11:53:21 2026 user.info basicstation[6603]: [RAL:INFO] RX mod=LORA f=904100000 bw=125 sz=23 dr=10 ch=r0i1 00D67D6700873CACB601000000180626203007AFD0072F
+Wed Jul 15 11:53:21 2026 user.debug basicstation[6603]: [LOG:DEBU] rrd_statistic_up-362 uplinkTqByAirtime: dr=0, timeonair=370, tm=1784116401
+Wed Jul 15 11:53:21 2026 user.debug basicstation[6603]: [LOG:DEBU] rrd_statistic_up-364 uplinkTqByPkt: dr=0, tm=1784116401
+Wed Jul 15 11:53:21 2026 user.debug basicstation[6603]: [LOG:DEBU] rrd_statistic_up-366 ChanBusyByAirtime: chan=1, timeonair=0, tm=370
+Wed Jul 15 11:53:21 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:53:21 2026 user.debug basicstation[6603]: [AIO:DEBU] [12|WS] < {"msgtype":"dnmsg","DevEui":"01-01-01-01-01-01-01-01","dC":0,"diid":4073552958,"pdu":"20f4fbbda250c0c452f882b53255dd1ee847fb66329365c1573bc207633ef8a5e7","priority":1,"RxDelay":5,"RX1DR":10,"RX1Freq":926900000,"RX2DR":8,"RX2Freq":923300000,"xtime":66146671906728317,"rctx":0,"MuxTime":1784116401.671621}
+Wed Jul 15 11:53:21 2026 user.err basicstation[6603]: [S2E:ERRO] Parsing of JSON message failed - ignored
+Wed Jul 15 11:53:22 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:53:23 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:53:24 2026 user.debug basicstation[6603]: [RAL:DEBU] [read_slave_pipe]|slave_index=0, crc_ok=32, crc_err=9, crc_non=1
+Wed Jul 15 11:53:24 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:53:25 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:53:26 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:53:27 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:53:28 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:53:29 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:53:29 2026 user.debug basicstation[6603]: [GPS:DEBU] gps_determine_state: failed to open /tmp/pps_status file
+Wed Jul 15 11:53:30 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:53:31 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:53:32 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:53:33 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:53:34 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:53:35 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:53:36 2026 user.info basicstation[6603]: [GPS:INFO] MCU/SX130X drift stats: min: +0.0ppm  q50: +9.0ppm  q80: -14.3ppm  max: -20.9ppm - threshold q90: +18.6ppm
+Wed Jul 15 11:53:36 2026 user.info basicstation[6603]: [GPS:INFO] Mean MCU drift vs SX130X#0: -1.0ppm
+Wed Jul 15 11:53:36 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:53:37 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:53:38 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:53:39 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:53:40 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:53:41 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:53:42 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:53:43 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:53:44 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:53:45 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:53:46 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:53:47 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:53:47 2026 user.debug basicstation[6603]: [LOG:DEBU] execute logger timeout handler.
+Wed Jul 15 11:53:47 2026 user.debug basicstation[6603]: [AIO:DEBU] [12|WS] > {"msgtype":"jreq","MHdr":0,"JoinEui":"B6-AC-3C-87-00-67-7D-D6","DevEui":"20-26-06-18-00-00-00-01","DevNonce":1841,"MIC":1385484235,"RefTime":1784116427.713899,"DR":0,"Freq":904700000,"upinfo":{"rctx":0,"xtime":66146671933231818,"gpstime":0,"fts":-1,"rssi":-39,"snr":12.75,"rxtime":1784116427.660740}}
+Wed Jul 15 11:53:47 2026 user.info basicstation[6603]: [RAL:INFO] RX mod=LORA f=904700000 bw=125 sz=23 dr=10 ch=r0i4 00D67D6700873CACB601000000180626203107CBCF9452
+Wed Jul 15 11:53:47 2026 user.debug basicstation[6603]: [LOG:DEBU] rrd_statistic_up-362 uplinkTqByAirtime: dr=0, timeonair=370, tm=1784116427
+Wed Jul 15 11:53:47 2026 user.debug basicstation[6603]: [LOG:DEBU] rrd_statistic_up-364 uplinkTqByPkt: dr=0, tm=1784116427
+Wed Jul 15 11:53:47 2026 user.debug basicstation[6603]: [LOG:DEBU] rrd_statistic_up-366 ChanBusyByAirtime: chan=4, timeonair=0, tm=370
+Wed Jul 15 11:53:48 2026 user.debug basicstation[6603]: [AIO:DEBU] [12|WS] < {"msgtype":"dnmsg","DevEui":"01-01-01-01-01-01-01-01","dC":0,"diid":2575862926,"pdu":"20b5a4ec9e2cc5627861478da1464d2fdf892a61d4c1517df342f8faaf5c980be8","priority":1,"RxDelay":5,"RX1DR":10,"RX1Freq":925700000,"RX2DR":8,"RX2Freq":923300000,"xtime":66146671933231818,"rctx":0,"MuxTime":1784116428.168676}
+Wed Jul 15 11:53:48 2026 user.err basicstation[6603]: [S2E:ERRO] Parsing of JSON message failed - ignored
+Wed Jul 15 11:53:48 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:53:49 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:53:50 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:53:51 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:53:52 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:53:53 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:53:54 2026 user.debug basicstation[6603]: [RAL:DEBU] [read_slave_pipe]|slave_index=0, crc_ok=33, crc_err=9, crc_non=1
+Wed Jul 15 11:53:54 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:53:55 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:53:56 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:53:57 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:53:58 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:53:59 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:53:59 2026 user.debug basicstation[6603]: [GPS:DEBU] gps_determine_state: failed to open /tmp/pps_status file
+Wed Jul 15 11:53:59 2026 user.debug basicstation[6603]: [MQT:DEBU] mqtt_logger: Client MQTT-ac1f09fffe2635ef sending PINGREQ
+Wed Jul 15 11:53:59 2026 user.debug basicstation[6603]: [MQT:DEBU] mqtt_logger_aio_read: mosquitto read ready
+Wed Jul 15 11:53:59 2026 user.debug basicstation[6603]: [MQT:DEBU] mqtt_logger: Client MQTT-ac1f09fffe2635ef received PINGRESP
+Wed Jul 15 11:54:00 2026 user.debug basicstation[6603]: [GPS:VERB] Time sync rejected: quality=984 threshold=976
+Wed Jul 15 11:54:00 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:54:01 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:54:02 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:54:02 2026 user.info basicstation[6603]: [GPS:INFO] Time sync qualities: min=645 q90=923 max=1212 (previous q90=976)
+Wed Jul 15 11:54:03 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:54:04 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:54:04 2026 user.debug basicstation[6603]: [GPS:VERB] Time sync rejected: quality=978 threshold=923
+Wed Jul 15 11:54:05 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:54:06 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:54:07 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:54:08 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:54:09 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:54:10 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:54:11 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:54:12 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:54:13 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:54:14 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:54:15 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:54:16 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:54:17 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:54:18 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:54:19 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:54:20 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:54:21 2026 user.info basicstation[6603]: [GPS:INFO] MCU/SX130X drift stats: min: +0.0ppm  q50: +8.1ppm  q80: +13.3ppm  max: +32.4ppm - threshold q90: -18.6ppm
+Wed Jul 15 11:54:21 2026 user.info basicstation[6603]: [GPS:INFO] Mean MCU drift vs SX130X#0: 2.2ppm
+Wed Jul 15 11:54:21 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:54:22 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:54:23 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:54:24 2026 user.debug basicstation[6603]: [RAL:DEBU] [read_slave_pipe]|slave_index=0, crc_ok=33, crc_err=9, crc_non=1
+Wed Jul 15 11:54:24 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:54:25 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:54:26 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:54:27 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:54:28 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:54:29 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:54:29 2026 user.debug basicstation[6603]: [GPS:DEBU] gps_determine_state: failed to open /tmp/pps_status file
+Wed Jul 15 11:54:30 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:54:31 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:54:32 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:54:33 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:54:34 2026 user.debug basicstation[6723]: [S00:DEBU] [CRC FAIL] 904.100MHz -18.00/-108.7 SF10/BW125 (mod=16/dr=10/bw=4) xtick=366d1acd (913119949) 23 bytes: 00D65F0522858EA854E9CC02AF6C3EE7C756B2323666B7
+Wed Jul 15 11:54:34 2026 user.debug basicstation[6603]: [AIO:DEBU] [12|WS] > {"msgtype":"jreq","MHdr":0,"JoinEui":"B6-AC-3C-87-00-67-7D-D6","DevEui":"20-26-06-18-00-00-00-01","DevNonce":1842,"MIC":-27115306,"RefTime":1784116474.021123,"DR":0,"Freq":904900000,"upinfo":{"rctx":0,"xtime":66146671979736527,"gpstime":0,"fts":-1,"rssi":-40,"snr":13.25,"rxtime":1784116474.170577}}
+Wed Jul 15 11:54:34 2026 user.info basicstation[6603]: [RAL:INFO] RX mod=LORA f=904900000 bw=125 sz=23 dr=10 ch=r1i5 00D67D6700873CACB601000000180626203207D64062FE
+Wed Jul 15 11:54:34 2026 user.debug basicstation[6603]: [LOG:DEBU] rrd_statistic_up-362 uplinkTqByAirtime: dr=0, timeonair=370, tm=1784116474
+Wed Jul 15 11:54:34 2026 user.debug basicstation[6603]: [LOG:DEBU] rrd_statistic_up-364 uplinkTqByPkt: dr=0, tm=1784116474
+Wed Jul 15 11:54:34 2026 user.debug basicstation[6603]: [LOG:DEBU] rrd_statistic_up-366 ChanBusyByAirtime: chan=5, timeonair=0, tm=370
+Wed Jul 15 11:54:34 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:54:34 2026 user.debug basicstation[6603]: [AIO:DEBU] [12|WS] < {"msgtype":"dnmsg","DevEui":"01-01-01-01-01-01-01-01","dC":0,"diid":272763763,"pdu":"2037beeababbed02de3837a701c7e91751af1ff3172f830fe0c4d430508624b16e","priority":1,"RxDelay":5,"RX1DR":10,"RX1Freq":926300000,"RX2DR":8,"RX2Freq":923300000,"xtime":66146671979736527,"rctx":0,"MuxTime":1784116474.667313}
+Wed Jul 15 11:54:34 2026 user.err basicstation[6603]: [S2E:ERRO] Parsing of JSON message failed - ignored
+Wed Jul 15 11:54:35 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:54:36 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:54:37 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:54:38 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:54:39 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:54:40 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:54:41 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:54:42 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:54:43 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:54:44 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:54:45 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:54:46 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:54:47 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:54:47 2026 user.debug basicstation[6603]: [LOG:DEBU] execute logger timeout handler.
+Wed Jul 15 11:54:48 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:54:49 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:54:49 2026 user.info mwan3track[3855]: Check (ping) failed for target "8.8.8.8" on interface wan (eth0.2). Current score: 11
+Wed Jul 15 11:54:50 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:54:51 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:54:52 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:54:53 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:54:54 2026 user.debug basicstation[6603]: [RAL:DEBU] [read_slave_pipe]|slave_index=0, crc_ok=34, crc_err=10, crc_non=1
+Wed Jul 15 11:54:54 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:54:55 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:54:56 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:54:57 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:54:58 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:54:59 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:54:59 2026 user.debug basicstation[6603]: [GPS:DEBU] gps_determine_state: failed to open /tmp/pps_status file
+Wed Jul 15 11:54:59 2026 user.debug basicstation[6603]: [MQT:DEBU] mqtt_logger: Client MQTT-ac1f09fffe2635ef sending PINGREQ
+Wed Jul 15 11:54:59 2026 user.debug basicstation[6603]: [MQT:DEBU] mqtt_logger_aio_read: mosquitto read ready
+Wed Jul 15 11:54:59 2026 user.debug basicstation[6603]: [MQT:DEBU] mqtt_logger: Client MQTT-ac1f09fffe2635ef received PINGRESP
+Wed Jul 15 11:55:00 2026 user.info basicstation[6603]: [GPS:INFO] MCU/SX130X drift stats: min: +1.0ppm  q50: -11.4ppm  q80: -22.4ppm  max: +32.8ppm - threshold q90: +26.2ppm
+Wed Jul 15 11:55:00 2026 user.info basicstation[6603]: [GPS:INFO] Mean MCU drift vs SX130X#0: 1.5ppm
+Wed Jul 15 11:55:00 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:55:01 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:55:02 2026 user.info basicstation[6603]: [GPS:INFO] Time sync qualities: min=660 q90=816 max=978 (previous q90=923)
+Wed Jul 15 11:55:02 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:55:03 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:55:04 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:55:04 2026 user.debug basicstation[6603]: [GPS:VERB] Time sync rejected: quality=902 threshold=816
+Wed Jul 15 11:55:05 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:55:06 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:55:07 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:55:08 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:55:08 2026 user.debug basicstation[6603]: [GPS:VERB] Time sync rejected: quality=932 threshold=816
+Wed Jul 15 11:55:09 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:55:10 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:55:11 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:55:12 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:55:13 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:55:14 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:55:15 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:55:16 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:55:17 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:55:18 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:55:19 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:55:20 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:55:21 2026 user.debug basicstation[6603]: [GPS:VERB] Time sync rejected: quality=927 threshold=816
+Wed Jul 15 11:55:21 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:55:22 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:55:23 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:55:24 2026 user.debug basicstation[6603]: [RAL:DEBU] [read_slave_pipe]|slave_index=0, crc_ok=34, crc_err=10, crc_non=1
+Wed Jul 15 11:55:24 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:55:25 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:55:26 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:55:27 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:55:28 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:55:29 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:55:29 2026 user.debug basicstation[6603]: [GPS:DEBU] gps_determine_state: failed to open /tmp/pps_status file
+Wed Jul 15 11:55:30 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:55:31 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:55:32 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:55:33 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:55:34 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:55:35 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:55:36 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:55:37 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:55:38 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:55:39 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:55:40 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:55:40 2026 user.debug basicstation[6723]: [S00:DEBU] [CRC FAIL] 905.100MHz -15.50/-108.7 SF10/BW125 (mod=16/dr=10/bw=4) xtick=3a640668 (979633768) 23 bytes: 00761D6D00878C2E326FD639B1CBD6D42473877421AE83
+Wed Jul 15 11:55:40 2026 user.debug basicstation[6603]: [AIO:DEBU] [12|WS] > {"msgtype":"jreq","MHdr":0,"JoinEui":"B6-AC-3C-87-00-67-7D-D6","DevEui":"20-26-06-18-00-00-00-01","DevNonce":1843,"MIC":-1012252106,"RefTime":1784116540.756316,"DR":0,"Freq":905300000,"upinfo":{"rctx":0,"xtime":66146672046241387,"gpstime":0,"fts":-1,"rssi":-106,"snr":-10.25,"rxtime":1784116540.666694}}
+Wed Jul 15 11:55:40 2026 user.info basicstation[6603]: [RAL:INFO] RX mod=LORA f=905300000 bw=125 sz=23 dr=10 ch=r1i7 00D67D6700873CACB6010000001806262033073642AAC3
+Wed Jul 15 11:55:40 2026 user.debug basicstation[6603]: [LOG:DEBU] rrd_statistic_up-362 uplinkTqByAirtime: dr=0, timeonair=370, tm=1784116540
+Wed Jul 15 11:55:40 2026 user.debug basicstation[6603]: [LOG:DEBU] rrd_statistic_up-364 uplinkTqByPkt: dr=0, tm=1784116540
+Wed Jul 15 11:55:40 2026 user.debug basicstation[6603]: [LOG:DEBU] rrd_statistic_up-366 ChanBusyByAirtime: chan=7, timeonair=0, tm=370
+Wed Jul 15 11:55:40 2026 user.debug basicstation[6603]: [AIO:DEBU] [12|WS] > {"msgtype":"jreq","MHdr":0,"JoinEui":"B6-AC-3C-87-00-67-7D-D6","DevEui":"20-26-06-18-00-00-00-01","DevNonce":1843,"MIC":-1012252106,"RefTime":1784116540.767351,"DR":0,"Freq":904300000,"upinfo":{"rctx":0,"xtime":66146672046241391,"gpstime":0,"fts":-1,"rssi":-40,"snr":9.5,"rxtime":1784116540.677735}}
+Wed Jul 15 11:55:40 2026 user.info basicstation[6603]: [RAL:INFO] RX mod=LORA f=904300000 bw=125 sz=23 dr=10 ch=r0i2 00D67D6700873CACB6010000001806262033073642AAC3
+Wed Jul 15 11:55:40 2026 user.debug basicstation[6603]: [LOG:DEBU] rrd_statistic_up-362 uplinkTqByAirtime: dr=0, timeonair=370, tm=1784116540
+Wed Jul 15 11:55:40 2026 user.debug basicstation[6603]: [LOG:DEBU] rrd_statistic_up-364 uplinkTqByPkt: dr=0, tm=1784116540
+Wed Jul 15 11:55:40 2026 user.debug basicstation[6603]: [LOG:DEBU] rrd_statistic_up-366 ChanBusyByAirtime: chan=2, timeonair=0, tm=370
+Wed Jul 15 11:55:41 2026 user.info restify: [SECURITY] root logged in
+Wed Jul 15 11:55:41 2026 user.debug restify: current jwt_max_active: 2026-07-15T13:55:41.254074Z
+Wed Jul 15 11:55:41 2026 user.debug restify: current jwt_exp: 2026-07-15T12:15:41.254158Z
+Wed Jul 15 11:55:41 2026 user.debug restify: current jwt_uuids: {'b3d6ccd4-4341-46c3-88b2-30b0716ece3a': datetime.datetime(2026, 7, 15, 13, 55, 41, 254074)}
+Wed Jul 15 11:55:41 2026 user.debug basicstation[6603]: [AIO:DEBU] [12|WS] < {"msgtype":"dnmsg","DevEui":"01-01-01-01-01-01-01-01","dC":0,"diid":1931423403,"pdu":"2079c50b2db1b574f3d9b96b0bd30d04d7fbd4e9f9d86b64e99d920d4dd6519942","priority":1,"RxDelay":5,"RX1DR":10,"RX1Freq":927500000,"RX2DR":8,"RX2Freq":923300000,"xtime":66146672046241387,"rctx":0,"MuxTime":1784116541.177093}
+Wed Jul 15 11:55:41 2026 user.err basicstation[6603]: [S2E:ERRO] Parsing of JSON message failed - ignored
+Wed Jul 15 11:55:41 2026 user.info restify: 127.0.0.1 - - [15/Jul/2026 11:55:41] "POST /auth/token HTTP/1.0" 200 -
+Wed Jul 15 11:55:41 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:55:41 2026 user.debug restify: current jwt_max_active: 2026-07-15T13:55:41.254074Z
+Wed Jul 15 11:55:41 2026 user.debug restify: current jwt_exp: 2026-07-15T12:15:41.438722Z
+Wed Jul 15 11:55:41 2026 user.debug restify: current jwt_uuids: {'b3d6ccd4-4341-46c3-88b2-30b0716ece3a': datetime.datetime(2026, 7, 15, 11, 56, 41, 443982), '1c10b3f0-c73a-42f8-b658-4366af76f052': datetime.datetime(2026, 7, 15, 13, 55, 41, 254074)}
+Wed Jul 15 11:55:41 2026 user.info restify: [SECURITY] root refreshed auth token
+Wed Jul 15 11:55:41 2026 user.info restify: 127.0.0.1 - - [15/Jul/2026 11:55:41] "GET /auth/token/refresh HTTP/1.0" 200 -
+Wed Jul 15 11:55:41 2026 user.info restify: 127.0.0.1 - - [15/Jul/2026 11:55:41] "GET /wisdm/status HTTP/1.0" 200 -
+Wed Jul 15 11:55:41 2026 user.debug basicstation[6603]: [LOG:DEBU] logger read datas: dutycycle
+Wed Jul 15 11:55:42 2026 user.debug basicstation[6603]: [LOG:VERB] dutycycle size: 65985
+Wed Jul 15 11:55:42 2026 user.debug basicstation[6603]: [LOG:DEBU] logger write datas size: 65985
+Wed Jul 15 11:55:42 2026 user.debug basicstation[6603]: [GPS:VERB] Time sync rejected: quality=847 threshold=816
+Wed Jul 15 11:55:42 2026 user.debug basicstation[6603]: [LOG:DEBU] close logger connection [14].
+Wed Jul 15 11:55:42 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:55:43 2026 user.info restify: 127.0.0.1 - - [15/Jul/2026 11:55:43] "GET /dashboard/lora/statistics HTTP/1.0" 200 -
+Wed Jul 15 11:55:43 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:55:43 2026 user.info mwan3track[3855]: Check (ping) failed for target "8.8.8.8" on interface wan (eth0.2). Current score: 11
+Wed Jul 15 11:55:44 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:55:45 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:55:46 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:55:46 2026 user.debug basicstation[6603]: [GPS:VERB] Time sync rejected: quality=1016 threshold=816
+Wed Jul 15 11:55:47 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:55:47 2026 user.debug basicstation[6603]: [LOG:DEBU] execute logger timeout handler.
+Wed Jul 15 11:55:48 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:55:49 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:55:50 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:55:51 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:55:52 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:55:52 2026 user.debug basicstation[6603]: [GPS:VERB] Time sync rejected: quality=962 threshold=816
+Wed Jul 15 11:55:53 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:55:54 2026 user.debug basicstation[6603]: [RAL:DEBU] [read_slave_pipe]|slave_index=0, crc_ok=36, crc_err=11, crc_non=1
+Wed Jul 15 11:55:54 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:55:54 2026 user.debug basicstation[6603]: [GPS:VERB] Time sync rejected: quality=929 threshold=816
+Wed Jul 15 11:55:55 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:55:56 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:55:57 2026 user.info basicstation[6603]: [GPS:INFO] MCU/SX130X drift stats: min: +0.5ppm  q50: +6.7ppm  q80: +13.8ppm  max: -21.4ppm - threshold q90: +19.0ppm
+Wed Jul 15 11:55:57 2026 user.info basicstation[6603]: [GPS:INFO] Mean MCU drift vs SX130X#0: 0.6ppm
+Wed Jul 15 11:55:57 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:55:58 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:55:59 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:55:59 2026 user.debug basicstation[6603]: [GPS:DEBU] gps_determine_state: failed to open /tmp/pps_status file
+Wed Jul 15 11:55:59 2026 user.debug basicstation[6603]: [MQT:DEBU] mqtt_logger: Client MQTT-ac1f09fffe2635ef sending PINGREQ
+Wed Jul 15 11:55:59 2026 user.debug basicstation[6603]: [MQT:DEBU] mqtt_logger_aio_read: mosquitto read ready
+Wed Jul 15 11:55:59 2026 user.debug basicstation[6603]: [MQT:DEBU] mqtt_logger: Client MQTT-ac1f09fffe2635ef received PINGRESP
+Wed Jul 15 11:56:00 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:56:01 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:56:02 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:56:03 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:56:04 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:56:04 2026 user.info basicstation[6603]: [GPS:INFO] Time sync qualities: min=681 q90=932 max=1016 (previous q90=816)
+Wed Jul 15 11:56:05 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:56:06 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:56:07 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:56:08 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:56:09 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?
+Wed Jul 15 11:56:10 2026 user.debug basicstation[6603]: [GPS:DEBU] GGA sentence without a fix - bad GPS signal?

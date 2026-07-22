@@ -1,0 +1,153 @@
+1                                                       2                                                             3                                                                    4                                                    5                                         6
+
+                                              VBAT                                                     U2                                                           VDD5
+
+D                                        B+                                                       1    VIN VOUT       5                                                                                                                                                                                                         D
+C                                        GND                                                      2                   4                                                                                                                                                                                                         C
+B                                                       C19    C18                                3    VSS                                        C21    C20                                                                                                                                                                    B
+A                                                       0.1uF  0.1uF                                                                              0.1uF  0.1uF                                                                                                                                                                  A
+                                                                                                       CE      NC                                                                                                                                                                         6
+                                      1
+                                                                                       R6         SOT-23-5_L2.9-W1.6-P0.95-LS2.8-BL
+
+                                                                                       10K
+
+                                                                                                       U3                                                GND
+                                                                                                                                                                      3.3V
+
+                                                                                                  1    VIN VOUT       5
+                                                                                                  2                   4
+                                                        C23    C24                 R7             3    VSS                           C25          C17    C16
+                                                                                                                                     0.1uF        0.1uF  0.1uF
+                                                        0.1uF 0.1uF                                    CE      NC
+
+                                                                                   10K            SOT-23-5_L2.9-W1.6-P0.95-LS2.8-BL
+
+                                                                                                                                                                                           L2     3.3V
+
+                                                                                                                                                         GND                               0R
+                                                                                                                                                                                           L1
+                                                                                              U1                                                                                                  3.3V
+                                                                                                                                                                                                                 VDD5
+
+                                                                                        23    P0.24/I2C_SDA_2                               GND      22                                    0R
+                                                                                              P0.25/I2C_SCL_2                    VBAT_IO_SX
+                                              VBAT                          U1-24       24    P1.01/SW1                                              21                          3.3V
+                                                                                              P1.02/SW2                               VBAT_SX                                    GND
+                                                                            U1-25       25    P1.03/LED1                                    SDIO     20                                3.3V
+                                                                                              P1.04/LED2                                                                               SWDDIO
+                                                                            U1-26       26    P0.03/QSPI_CLK                             SDCLK       19                                SWDCLK                R3
+                                                                                              P0.02/QSPI_DIO3                      NRF_RESET                                           NRF_RESET
+                                                                            U1-27       27    P0.28/QSPI_DIO2                                        18                                GND                   10K          BZ1
+                                                                                              P0.29/QSPI_DIO1                               GND                                                                           BUZZ
+                                              R5                            U1-28       28    P0.30/QSPI_DIO0                             RF_BT      17                                                 12V            1
+                                                                                              P0.26/QSPI_CS                                                                                                            2
+                                              10K                           U1-29       29    GND                                           GND      16
+                                                                                              GND                                   P0.09/NFC1
+                                                                                        30    RF_LORa                               P0.10/NFC2       15       RF_BT
+                                                                                              GND                            P0.21/UART1_DE
+                                                                            U1-31       31    P0.31/AIN7                     P0.20/UART1_TX          14  GND                               R1
+                                                                                              P0.05/AIN3                     P0.19/UART1_RX          13
+                                              R4        C22                 U1-32       32    P0.04/AIN2                     P0.17/UART2_DE                                                                  Q1
+                                                                                              GND                            P0.16/UART2_TX
+                                              10K       0.1uF               U1-33       33    VDD_NRF                        P0.15/UART2_RX          12       U1-12                        1K                    8050
+                                                                                              VBAT_NRF                          P0.14/I2C_SCL                                                     R2
+                                                                            U1-34       34                                      P0.13/I2C_SDA        11       U1-11
+
+                                                               GND                      35                                                 USB+      10       U1-10                               10K
+                                                                                        36                                                  USB-
+                                              GND                                                                                          VBUS      9        U1-9
+
+                                                                            RF_LORA 37                                                               8        U1-8
+
+                                                               GND                      38                                                           7        U1-7                                           GND
+                                                                                        39
+                                                                                                                                                     6
+
+                                                                                        40                                                           5
+
+                                                                                        41                                                           4                      GND        G
+
+                                              3.3V  L4         GND                      42                                                           3                                 D+
+                                                                                        43
+                                                                                                                                                     2                                 D-
+
+                                                    0R                                  44                                                           1                                 V
+
+                                                               C27
+
+                                                               0.1uF                          COMM-SMD_44P-L23.0-W15.0-P1.20_RAK4630-8-SM-I
+
+                                              3.3V  L3
+
+                                                    0R         GND
+
+                                                                     C26
+                                                                     0.1uF
+
+                                                               GND
+
+                                              VDD5
+
+                                                        C4                                                     C3                                                                C2                                                C1
+
+                                                                    GND                                                     GND                                                            GND                                          GND
+
+                                                        0.1uF                                                  0.1uF                                                             0.1uF                                             0.1uF
+
+                                                              LED4                                                    LED3                                                             LED2                                              LED1
+                                                        1 VDD                                                                                                                    1 VDD                                             1 VDD
+                                                                            DIN            4                   1      VDD            DIN 4                                                        DIN 4                                            DIN 4
+
+                                                        2 DOUT              VSS            3                   2      DOUT           VSS          3                              2 DOUT           VSS   3                          2 DOUT          VSS  3
+
+                                                                                                          GND                                                    GND                                                        GND                                                      GND
+                                                        LED-SMD_4P-L5.0-W5.0-LS5.4-TL_GL5050RGB01H-T           LED-SMD_4P-L5.0-W5.0-LS5.4-TL_GL5050RGB01H-T                      LED-SMD_4P-L5.0-W5.0-LS5.4-TL_GL5050RGB01H-T      LED-SMD_4P-L5.0-W5.0-LS5.4-TL_GL5050RGB01H-T
+
+                                                        C8                                                     C7                                                                C6                                                C5
+
+                                                                    GND                                                     GND                                                            GND                                          GND
+
+                                                        0.1uF                                                  0.1uF                                                             0.1uF                                             0.1uF
+
+                                                              LED8                                                    LED7                                                             LED6                                              LED5
+                                                        1 VDD                                                                                                                    1 VDD                                             1 VDD
+                                                                            DIN            4                   1      VDD            DIN 4                                                        DIN 4                                            DIN 4
+
+                                                        2 DOUT              VSS            3                   2      DOUT           VSS          3                              2 DOUT           VSS   3                          2 DOUT          VSS  3
+
+                                                                                                          GND                                                    GND                                                          GND                                                    GND
+                                                        LED-SMD_4P-L5.0-W5.0-LS5.4-TL_GL5050RGB01H-T           LED-SMD_4P-L5.0-W5.0-LS5.4-TL_GL5050RGB01H-T                 LED-SMD_4P-L5.0-W5.0-LS5.4-TL_GL5050RGB01H-T           LED-SMD_4P-L5.0-W5.0-LS5.4-TL_GL5050RGB01H-T
+
+                                                        C12                                                    C11                                                               C10                                               C9
+
+                                                                    GND                                                     GND                                                            GND                                          GND
+
+                                                        0.1uF                                                  0.1uF                                                             0.1uF                                             0.1uF
+
+                                                              LED12                                                   LED11                                                            LED10                                             LED9
+                                                        1 VDD                                                                                                                    1 VDD                                             1 VDD
+                                                                            DIN            4                   1      VDD            DIN 4                                                        DIN 4                                            DIN 4
+
+                                                        2 DOUT              VSS            3                   2      DOUT           VSS          3                              2 DOUT           VSS   3                          2 DOUT          VSS  3
+
+                                                                                                          GND                                                    GND                                                          GND                                                    GND
+                                                        LED-SMD_4P-L5.0-W5.0-LS5.4-TL_GL5050RGB01H-T           LED-SMD_4P-L5.0-W5.0-LS5.4-TL_GL5050RGB01H-T                 LED-SMD_4P-L5.0-W5.0-LS5.4-TL_GL5050RGB01H-T           LED-SMD_4P-L5.0-W5.0-LS5.4-TL_GL5050RGB01H-T
+
+                                                                                                               C15                                                               C14                                               C13
+
+                                                                                                                            GND                                                            GND                                          GND
+
+                                                                                                               0.1uF                                                             0.1uF                                             0.1uF
+
+                                                                                                                      LED15                                                            LED14                                             LED13
+                                                                                                                                                                                 1 VDD                                             1 VDD
+                                                                                                               1      VDD            DIN 4                                                        DIN 4                                            DIN 4
+
+                                                                                                  D16          2      DOUT           VSS          3                              2 DOUT           VSS   3                          2 DOUT          VSS  3
+
+                                                                                                                                                                 GND                                                          GND                                                    GND
+                                                                                                               LED-SMD_4P-L5.0-W5.0-LS5.4-TL_GL5050RGB01H-T                 LED-SMD_4P-L5.0-W5.0-LS5.4-TL_GL5050RGB01H-T           LED-SMD_4P-L5.0-W5.0-LS5.4-TL_GL5050RGB01H-T
+
+                                                        2                                                             3                                                                    4                                                    5
+

@@ -1,0 +1,18 @@
+正如我们在微信中沟通的，以下是需要为所有网关配置的
+ LNS 地址：
+wss://lns.simulalert.com:8887
+账号：343612115@qq.com
+密码：Simulalert@2026
+我会另外提供登录凭证。
+
+附件是服务器证书。
+
+我们需要尽快获得以下信息：
+
+网关 EUI
+已确认的 Hub EUI
+已确认的 Badge EUI
+
+网关密码
+gatewatepassword0!
+
