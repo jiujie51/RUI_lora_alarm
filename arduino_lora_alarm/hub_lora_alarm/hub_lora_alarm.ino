@@ -145,7 +145,6 @@ int loraThread(struct rt *rt) {
 	}
 
 	NRF_LOG_INFO( "=== LoRaWAN Joined ===");
-	//api.lorawan.deviceClass.set(RAK_LORA_CLASS_B);
 
 	/* LoRaWAN 入网后 SoftDevice 可能挂起 BLE 广播, 重新拉起 */
 	SEGGER_RTT_printf(0, "BLE: re-start after LoRaWAN join\n");
@@ -158,6 +157,11 @@ int loraThread(struct rt *rt) {
 		RT_SLEEP(rt, 1000);
 	}
 	NRF_LOG_INFO("Beacon lock: %d", app_hal_is_beacon_locked());
+
+	/* 配置 Class B 多播组 (4 组, 用于下行告警广播) */
+	SEGGER_RTT_printf(0, "Setting up multicast groups...\n");
+	app_hal_setup_multicast();
+
 	send_heartbeat();
 
 	/* 主循环: 消费 TX flag */

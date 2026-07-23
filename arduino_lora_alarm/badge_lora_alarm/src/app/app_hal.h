@@ -1,6 +1,5 @@
 /*
  * LoRaWAN 硬件抽象层 — RUI3 api.lorawan 封装
- * 新建模块, 替代 NCS hal_sx1262.c / lorawan_classb.c / lorawan_mc.c
  */
 #ifndef APP_HAL_H
 #define APP_HAL_H

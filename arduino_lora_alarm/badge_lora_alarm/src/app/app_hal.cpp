@@ -1,18 +1,17 @@
 #include <stdint.h>
 /*
- * LoRaWAN 硬件抽象层 — RUI3 api.lorawan 封装
- * 新建模块, 替代 NCS hal_sx1262.c / lorawan_classb.c / lorawan_mc.c
+ * LoRaWAN 硬件抽象层 — Badge 版 (RUI3 api.lorawan 封装)
  *
- * RUI3 自动管理: DevNonce, DevAddr, NwkSKey, AppSKey, FCnt, 入网模式, 频段, Class
- * 应用层只需: 凭证设置 → join → send/recv callback
+ * 与 Hub 共用: beacon lock, 多播, 发送重试逻辑
+ * Badge 差异: ADR 关闭 (移动设备)
  */
 #include <Arduino.h>
 #include "app_hal.h"
 #include "../app/join_state.h"
 #include "../proto/proto_internal.h"
-#include "../boards/hub/board.h"
-#include "nrf_log.h"
+#include "../boards/badge/board.h"
 
+extern "C" int SEGGER_RTT_printf(unsigned, const char*, ...);
 
 static lora_downlink_cb_t g_downlink_cb = NULL;
 static int join_state_val = JOIN_STATE_OFFLINE;
@@ -33,20 +32,20 @@ static void ruiv3_recv_cb(SERVICE_LORA_RECEIVE_T *data) {
 static void ruiv3_join_cb(int32_t status) {
 	if (status == 0) {
 		join_state_val = JOIN_STATE_JOINED;
-		NRF_LOG_INFO("LoRaWAN joined successfully");
+		SEGGER_RTT_printf(0, "[INFO] LoRaWAN joined successfully\n");
 	} else if (status == RAK_LORAMAC_STATUS_BEACON_LOCKED) {
 		beacon_locked = true;
-		NRF_LOG_INFO("Class B beacon locked");
+		SEGGER_RTT_printf(0, "[INFO] Class B beacon locked\n");
 	} else if (status == RAK_LORAMAC_STATUS_BEACON_LOST) {
 		beacon_locked = false;
-		NRF_LOG_WARNING("Class B beacon lost");
+		SEGGER_RTT_printf(0, "[WARN] Class B beacon lost\n");
 	}
 }
 
 /* ── 初始化 ── */
 void app_hal_lorawan_init(void) {
 	if (api.lorawan.nwm.get() != 1) {
-		NRF_LOG_INFO("Set Node device work mode %s\r\n",
+		SEGGER_RTT_printf(0, "[INFO] Set Node device work mode %s\r\n",
 				api.lorawan.nwm.set() ? "Success" : "Fail");
 		api.system.reboot();
 	}
@@ -63,14 +62,15 @@ void app_hal_lorawan_init(void) {
 	api.lorawan.deviceClass.set(RAK_LORA_CLASS_B);
 	api.lorawan.njm.set(RAK_LORA_OTAA);
 
-	api.lorawan.adr.set(DEVICE_TYPE == 1);
+	/* Badge 移动设备关闭 ADR */
+	api.lorawan.adr.set(false);
 	api.lorawan.rety.set(1);
 	api.lorawan.cfm.set(0);
 
 	api.lorawan.registerRecvCallback(ruiv3_recv_cb);
 	api.lorawan.registerJoinCallback(ruiv3_join_cb);
 
-	NRF_LOG_INFO("LoRaWAN HAL initialized (band=%d, class=B)", OTAA_BAND);
+	SEGGER_RTT_printf(0, "[INFO] LoRaWAN HAL initialized (band=%d, class=B)\n", OTAA_BAND);
 }
 
 /* ── 下行回调注册 ── */
@@ -117,22 +117,25 @@ int app_hal_get_join_state(void) { return join_state_val; }
 
 bool app_hal_is_beacon_locked(void) { return beacon_locked; }
 
-/* ── 发送 (beacon lock 未就绪时阻塞上行, 保护 Class B 状态机) ── */
+/* ── 发送 (beacon lock 未就绪时阻塞上行) ── */
 bool app_hal_send(uint8_t fport, const uint8_t *data, uint8_t len, bool confirmed) {
 	if (!api.lorawan.njs.get()) {
-		NRF_LOG_WARNING("TX blocked: not joined");
+		SEGGER_RTT_printf(0, "[WARN] TX blocked: not joined\n");
 		return false;
 	}
 	if (!beacon_locked) {
-		NRF_LOG_WARNING("TX blocked: beacon not locked");
+		SEGGER_RTT_printf(0, "[WARN] TX blocked: beacon not locked\n");
 		return false;
 	}
 
 	for (int attempt = 0; attempt < 3; attempt++) {
+		SEGGER_RTT_printf(0, "[LORA] send fport=%d len=%d attempt=%d\n", fport, len, attempt);
 		if (api.lorawan.send(len, (uint8_t *)data, fport, confirmed, 3)) {
+			SEGGER_RTT_printf(0, "[LORA] send OK\n");
 			return true;
 		}
-		NRF_LOG_WARNING("TX attempt %d/3 failed, retry in 2s...", attempt + 1);
+		SEGGER_RTT_printf(0, "[LORA] send FAIL attempt=%d\n", attempt + 1);
+		SEGGER_RTT_printf(0, "[WARN] TX attempt %d/3 failed, retry in 2s...\n", attempt + 1);
 		delay(2000);
 	}
 	return false;
@@ -144,6 +147,11 @@ bool app_hal_send(uint8_t fport, const uint8_t *data, uint8_t len, bool confirme
  * 设备通过 match_multicast() (proto_handler.cpp) 决定是否响应.
  */
 void app_hal_setup_multicast(void) {
+	if (!beacon_locked) {
+		SEGGER_RTT_printf(0, "[INFO] Multicast setup skipped (beacon not locked)\n");
+		return;
+	}
+
 	struct {
 		uint32_t addr;
 		uint8_t  nwkskey[16];
@@ -171,12 +179,12 @@ void app_hal_setup_multicast(void) {
 		memcpy(session.McNwkSKey, groups[i].nwkskey, 16);
 
 		if (api.lorawan.addmulc(session)) {
-			NRF_LOG_INFO("MC group %d OK: addr=0x%08X", i, groups[i].addr);
+			SEGGER_RTT_printf(0, "[INFO] MC group %d OK: addr=0x%08X\n", i, groups[i].addr);
 			ok++;
 		} else {
-			NRF_LOG_ERROR("MC group %d FAIL: addr=0x%08X", i, groups[i].addr);
+			SEGGER_RTT_printf(0, "[ERROR] MC group %d FAIL: addr=0x%08X\n", i, groups[i].addr);
 		}
 	}
 
-	NRF_LOG_INFO("Multicast setup: %d/%d groups", ok, num_groups);
+	SEGGER_RTT_printf(0, "[INFO] Multicast setup: %d/%d groups\n", ok, num_groups);
 }

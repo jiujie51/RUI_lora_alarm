@@ -17,7 +17,7 @@
  * 1 = init 后蜂鸣 3 声短促滴, 确认硬件正常
  * 0 = 跳过
  */
-#define BUZZER_SELF_TEST  1
+#define BUZZER_SELF_TEST  0
 
 
 /* 状态 */
