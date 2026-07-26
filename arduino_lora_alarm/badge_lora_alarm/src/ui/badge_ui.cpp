@@ -18,6 +18,7 @@
 #include "../app/app_hal.h"
 #include "../proto/proto_internal.h"
 #include "../ble/ble_badge_scan.h"
+#include "../drv/gps_drv.h"
 
 extern "C" int SEGGER_RTT_printf(unsigned, const char*, ...);
 
@@ -93,22 +94,44 @@ static void send_key_event_uplink(uint8_t btn_id) {
 	if (!app_hal_is_joined()) return;
 	if (!app_hal_is_beacon_locked()) return;
 
-	SEGGER_RTT_printf(0, "[UPLINK] step2: get scan result\n");
+	SEGGER_RTT_printf(0, "[UPLINK] step2: get location\n");
 	const struct ble_scan_result *result = ble_scan_get_result();
 	static uint8_t buf[64];
-	int8_t rssi = result->valid ? result->rssi : 0;
-	const uint8_t *hub_mac = result->valid ? result->hub_mac : (const uint8_t *)"\x00\x00\x00\x00\x00\x00";
+	int8_t  rssi    = 0;
+	const uint8_t *hub_mac = (const uint8_t *)"\x00\x00\x00\x00\x00\x00";
+	int32_t lat     = 0;
+	int32_t lon     = 0;
+
+	if (result->valid) {
+		/* BLE 扫描成功 → 用 Hub MAC 定位 */
+		rssi    = result->rssi;
+		hub_mac = result->hub_mac;
+		SEGGER_RTT_printf(0, "[UPLINK] BLE hub: MAC=%02X:%02X RSSI=%d room=%d\n",
+			hub_mac[0], hub_mac[1], hub_mac[2], hub_mac[3], hub_mac[4], hub_mac[5],
+			rssi, result->room_id);
+	} else {
+		/* BLE 扫描失败 → 后备 GPS */
+		SEGGER_RTT_printf(0, "[UPLINK] BLE no hub, fallback to GPS...\n");
+#if GPS_ENABLE
+		if (gps_drv_has_fix()) {
+			gps_drv_get_position(&lat, &lon);
+			SEGGER_RTT_printf(0, "[UPLINK] GPS fix: lat=%d lon=%d sats=%d\n",
+				lat, lon, gps_drv_satellites());
+		} else
+#endif
+		{
+			SEGGER_RTT_printf(0, "[UPLINK] GPS no fix either — sending without location\n");
+		}
+	}
 
 	SEGGER_RTT_printf(0, "[UPLINK] step3: build frame\n");
 	int len = proto_build_key_event(buf, sizeof(buf), btn_id, 0, rssi,
-		hub_mac, 0, 0);
+		hub_mac, lat, lon);
 
 	SEGGER_RTT_printf(0, "[UPLINK] step4: len=%d, send...\n", len);
 	if (len > 0) {
 		app_hal_send(FPORT_COMMON, buf, len, false);
 		SEGGER_RTT_printf(0, "[UPLINK] step5: send done\n");
-		SEGGER_RTT_printf(0, "[INFO] Key event uplink: btn=%d rssi=%d hub_room=%d\n",
-			btn_id, rssi, result->valid ? result->room_id : 0);
 	}
 	SEGGER_RTT_printf(0, "[UPLINK] done\n");
 }

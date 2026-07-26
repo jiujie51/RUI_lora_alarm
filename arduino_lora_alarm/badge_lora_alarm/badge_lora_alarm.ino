@@ -44,6 +44,7 @@ int SEGGER_RTT_printf(unsigned BufferIndex, const char * sFormat, ...);
 #include "src/config/config_store.h"
 #include "src/drv/led_strip.h"
 #include "src/drv/buzzer_pwm.h"
+#include "src/drv/gps_drv.h"
 #include "src/ui/badge_ui.h"
 #include "src/ble/ble_badge_scan.h"
 
@@ -166,6 +167,9 @@ int loraThread(struct rt *rt) {
 			send_heartbeat();
 			power_mgr_update();
 			send_power_report();
+#if GPS_ENABLE
+			gps_drv_check_timeout();
+#endif
 			SEGGER_RTT_printf(0, "[TX] heartbeat+power done\n");
 		}
 
@@ -175,11 +179,17 @@ int loraThread(struct rt *rt) {
 			uint32_t now = millis();
 			if (now - last_log > 10000) {
 				last_log = now;
-				SEGGER_RTT_printf(0, "[ALIVE] joined=%d alarm=%d batt=%d%% scan=%d\n",
+				SEGGER_RTT_printf(0, "[ALIVE] joined=%d alarm=%d batt=%d%% scan=%d gps=%d\n",
 					app_hal_is_joined(),
 					alarm_sm_current_priority(),
 					power_mgr_get_battery_pct(),
-					ble_scan_active());
+					ble_scan_active(),
+#if GPS_ENABLE
+					gps_drv_has_fix()
+#else
+					0
+#endif
+				);
 			}
 		}
 
@@ -198,6 +208,9 @@ int actuatorThread(struct rt *rt) {
 		actuator_mgr_tick();
 			badge_ui_poll();
 			ble_scan_process();
+#if GPS_ENABLE
+			gps_drv_poll();
+#endif
 			RT_SLEEP(rt, 10);
 	}
 	RT_END(rt);
@@ -245,6 +258,11 @@ void setup() {
 	led_strip_init();
 	SEGGER_RTT_printf(0, "=== STEP 6: buzzer_pwm_init ===\n");
 	buzzer_pwm_init();
+
+#if GPS_ENABLE
+		SEGGER_RTT_printf(0, "=== STEP 6b: gps_drv_init ===\n");
+		gps_drv_init();
+#endif
 
 	/* 7. Badge UI (按键 + 两段式确认) */
 	SEGGER_RTT_printf(0, "=== STEP 7: badge_ui_init ===\n");
