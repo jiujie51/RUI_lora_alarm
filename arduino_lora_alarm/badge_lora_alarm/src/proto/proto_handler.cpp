@@ -26,7 +26,9 @@ uint8_t proto_alarm_to_internal(uint8_t proto_val) {
 }
 
 uint8_t internal_button_to_proto(uint8_t btn) {
-	static const uint8_t map[4] = { 0, 1, 2, 3};
+	/* 协议定义: 0=绿,1=蓝,2=黄,3=红
+	 * BTN_RED=0→3, BTN_BLUE=1→1, BTN_YELLOW=2→2, BTN_GREEN=3→0 */
+	static const uint8_t map[4] = { 3, 1, 2, 0 };
 	return (btn < 4) ? map[btn] : 0xFF;
 }
 
@@ -118,8 +120,9 @@ static int handle_code_setting(const uint8_t *data, uint8_t len) {
 	}
 
 	actuator_set_config(&cfg);
+	config_save_alarm_config(&cfg);
 
-	SEGGER_RTT_printf(0, "[INFO] CMD 0x04: config updated alarm=%d prio=%d led=(%d,%d,%d) vol=%d\n",
+	SEGGER_RTT_printf(0, "[INFO] CMD 0x04: config updated+persisted alarm=%d prio=%d led=(%d,%d,%d) vol=%d\n",
 		proto_alarm, prio, led_r, led_g, led_b, volume);
 	return 0;
 }
@@ -176,9 +179,29 @@ static int handle_buzzer_control(const uint8_t *data, uint8_t len) {
 	return actuator_buzzer_override(mode, volume, on_ms, off_ms);
 }
 
-/* ── CMD 0x07: Vibration (Badge 已实现震动) ── */
+/* ── CMD 0x07: Vibration Control ──
+ * 协议: group(1) + mode_sw(1) + onoff(1) + action_type(1) + vib_on(4) + vib_off(4) = 12 bytes */
 static int handle_vibration_control(const uint8_t *data, uint8_t len) {
-	(void)data; (void)len;
+	if (len < 12) { SEGGER_RTT_printf(0, "[WARN] CMD 0x07: need 12 bytes\n"); return -22; }
+
+	uint8_t cmd_group    = data[0];
+	uint8_t mode_sw      = data[1];
+	uint8_t onoff        = data[2];
+	/* action_type = data[3]; — 0=动作, 1=设置 (暂不区分) */
+	uint32_t vib_on      = read_u32_be(&data[4]);
+	uint32_t vib_off     = read_u32_be(&data[8]);
+
+	if (!match_multicast(cmd_group, 0, device_group_id, device_room_id)) return -13;
+
+	if (mode_sw & 0x01) {
+		/* 间歇模式: 震动 on/off 循环 */
+		actuator_vibration_override(2, (uint16_t)vib_on, (uint16_t)vib_off);
+	} else {
+		/* 常震模式 */
+		actuator_vibration_override(onoff ? 1 : 0, 0, 0);
+	}
+
+	SEGGER_RTT_printf(0, "[INFO] CMD 0x07: vibration mode=%d onoff=%d\n", mode_sw, onoff);
 	return 0;
 }
 

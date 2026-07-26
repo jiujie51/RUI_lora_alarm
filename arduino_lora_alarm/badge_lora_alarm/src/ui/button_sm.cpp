@@ -34,8 +34,8 @@ struct combo_def {
 	uint8_t report_id;
 };
 static const struct combo_def combos[] = {
-	{ BTN_YELLOW, BTN_GREEN, BTN_YELLOW }, /* Clear All */
-	{ BTN_GREEN,  BTN_BLUE,  BTN_GREEN  }, /* Device toggle */
+	{ BTN_BLUE,  BTN_YELLOW, BTN_BLUE  }, /* Blue+Yellow: Reset (清除所有告警) */
+	{ BTN_GREEN, BTN_BLUE,   BTN_GREEN  }, /* Green+Blue: Device toggle (禁用/启用) */
 };
 #define COMBO_COUNT (sizeof(combos) / sizeof(combos[0]))
 

@@ -187,13 +187,13 @@ static void on_button_event(uint8_t id, enum btn_event evt) {
 	/* COMBO 始终有效 */
 	if (evt == BTN_EVENT_COMBO) {
 		ui_confirm_reset();
-		if (id == BTN_YELLOW) {
-			/* Yellow+Green: Clear All */
-			SEGGER_RTT_printf(0, "[INFO] Combo: Clear All alarms\n");
+		if (id == BTN_BLUE) {
+			/* Blue+Yellow 5s: Reset — 清除所有告警, 关灯关蜂鸣 */
+			SEGGER_RTT_printf(0, "[INFO] Combo: Reset (Clear All alarms)\n");
 			alarm_sm_clear_all();
 			actuator_all_off();
 		} else if (id == BTN_GREEN) {
-			/* Green+Blue: Device toggle */
+			/* Green+Blue 5s: Device disable/re-enable */
 			device_enabled = !device_enabled;
 			SEGGER_RTT_printf(0, "[INFO] Combo: Device %s\n", device_enabled ? "ENABLED" : "DISABLED");
 		}

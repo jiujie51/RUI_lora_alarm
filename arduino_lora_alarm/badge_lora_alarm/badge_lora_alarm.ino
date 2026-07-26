@@ -179,10 +179,11 @@ int loraThread(struct rt *rt) {
 			uint32_t now = millis();
 			if (now - last_log > 10000) {
 				last_log = now;
-				SEGGER_RTT_printf(0, "[ALIVE] joined=%d alarm=%d batt=%d%% scan=%d gps=%d\n",
+				SEGGER_RTT_printf(0, "[ALIVE] joined=%d alarm=%d batt=%d%% chg=%d scan=%d gps=%d\n",
 					app_hal_is_joined(),
 					alarm_sm_current_priority(),
 					power_mgr_get_battery_pct(),
+					power_mgr_is_charging(),
 					ble_scan_active(),
 #if GPS_ENABLE
 					gps_drv_has_fix()
@@ -242,12 +243,12 @@ void setup() {
 	/* 2. 协议引擎 + 告警 + 执行器 */
 	SEGGER_RTT_printf(0, "=== STEP 2: proto/alarm/actuator init ===\n");
 	proto_engine_init();
-	alarm_sm_init();
-	actuator_mgr_init();
-
-	/* 3. Flash 配置 */
+	/* 3. Flash 配置 (必须在 actuator_mgr_init 之前, alarm config 从 flash 恢复) */
 	SEGGER_RTT_printf(0, "=== STEP 3: config_store_init ===\n");
 	config_store_init();
+
+	alarm_sm_init();
+	actuator_mgr_init();
 
 	/* 4. 电源管理 */
 	SEGGER_RTT_printf(0, "=== STEP 4: power_mgr_init ===\n");

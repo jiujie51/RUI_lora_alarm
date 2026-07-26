@@ -35,9 +35,10 @@ int  actuator_mgr_sync(void);
 void actuator_mgr_tick(void);
 void actuator_show_join_status(int state);
 
-/* 手动覆盖 (CMD 0x05-0x06) */
+/* 手动覆盖 (CMD 0x05-0x07) */
 int  actuator_led_override(uint8_t r, uint8_t g, uint8_t b, uint8_t mode, uint16_t on_ms, uint16_t off_ms);
 int  actuator_buzzer_override(uint8_t mode, uint8_t volume, uint16_t on_ms, uint16_t off_ms);
+int  actuator_vibration_override(uint8_t mode, uint16_t on_ms, uint16_t off_ms);
 int  actuator_all_off(void);
 
 /* 配置管理 */

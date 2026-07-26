@@ -10,6 +10,7 @@
 #include "join_state.h"
 #include "../drv/led_strip.h"
 #include "../drv/buzzer_pwm.h"
+#include "../config/config_store.h"
 #include "../boards/badge/board.h"
 
 extern "C" int SEGGER_RTT_printf(unsigned, const char*, ...);
@@ -88,10 +89,19 @@ static int apply_buzzer(uint8_t prio) {
 }
 
 int actuator_mgr_init(void) {
-	memcpy(&config, &default_config, sizeof(config));
+	/* 从 Flash 恢复 CMD 0x04 告警配置 (若无效则用 default) */
+	const struct alarm_config *saved = config_get_alarm_config();
+	if (saved && saved->led_map[0].r != 0) {
+		/* 简单校验: P0 Red 的 R 分量非零 = 已配置过 */
+		memcpy(&config, saved, sizeof(config));
+		SEGGER_RTT_printf(0, "[INFO] Alarm config loaded from flash\n");
+	} else {
+		memcpy(&config, &default_config, sizeof(config));
+	}
+
 	pinMode(MOTOR_PIN, OUTPUT);
 	digitalWrite(MOTOR_PIN, LOW);
-	SEGGER_RTT_printf(0, "[INFO] Actuator manager initialized (Badge, default config)\n");
+	SEGGER_RTT_printf(0, "[INFO] Actuator manager initialized (Badge)\n");
 	return 0;
 }
 
@@ -137,6 +147,26 @@ int actuator_buzzer_override(uint8_t mode, uint8_t volume,
 	if (mode > BUZZER_PATTERN) return -22;
 	override_active = true;
 	return buzzer_pwm_set((enum buzzer_mode)mode, volume, on_ms, off_ms);
+}
+
+int actuator_vibration_override(uint8_t mode, uint16_t on_ms, uint16_t off_ms) {
+	override_active = true;
+	switch (mode) {
+	case 0:  /* 关 */
+		digitalWrite(MOTOR_PIN, LOW);
+		break;
+	case 1:  /* 常震 */
+		digitalWrite(MOTOR_PIN, HIGH);
+		break;
+	case 2:  /* 间歇 (由 tick 周期性处理 — 简化: 直接常震) */
+		/* TODO: 实现间歇震动 pattern (需要 tick 处理或定时器) */
+		digitalWrite(MOTOR_PIN, HIGH);
+		SEGGER_RTT_printf(0, "[INFO] Vibration pattern mode (interval), use continuous for now\n");
+		break;
+	default:
+		return -22;
+	}
+	return 0;
 }
 
 int actuator_all_off(void) {
