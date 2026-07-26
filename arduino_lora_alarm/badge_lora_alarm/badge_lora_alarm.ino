@@ -47,9 +47,6 @@ int SEGGER_RTT_printf(unsigned BufferIndex, const char * sFormat, ...);
 #include "src/ui/badge_ui.h"
 #include "src/ble/ble_badge_scan.h"
 
-/* ── 功能开关 ── */
-#define LORAWAN_ENABLE  1   /* 1=启用 LoRaWAN, 0=仅测试 BLE */
-
 /* ── 常量 ── */
 #define PERIODIC_TX_INTERVAL_MS   (HEARTBEAT_INTERVAL_SEC * 1000UL)
 /* ── 硬件自检 ──
@@ -128,13 +125,9 @@ static void periodic_timer_cb(void *) {
 
 /* ══════════════════════════════════════════════════════════
  * loraThread — LoRaWAN 入网 + 心跳/电量 TX (flag 驱动)
- *              或 LORAWAN_ENABLE=0 时: BLE 扫描测试
  * ══════════════════════════════════════════════════════════ */
 int loraThread(struct rt *rt) {
 	RT_BEGIN(rt);
-
-#if LORAWAN_ENABLE
-	/* ── LoRaWAN 模式 ── */
 
 	/* 等待入网完成 */
 	for (;;) {
@@ -193,40 +186,6 @@ int loraThread(struct rt *rt) {
 		RT_SLEEP(rt, 100);
 	}
 
-#else
-	/* ── BLE 扫描测试模式 (LoRaWAN 禁用) ── */
-	SEGGER_RTT_printf(0, "=== BLE SCAN TEST MODE (LoRaWAN disabled) ===\n");
-	SEGGER_RTT_printf(0, "Waiting 2s before first scan...\n");
-	RT_SLEEP(rt, 2000);
-
-	for (;;) {
-		/* 每 10s 执行一次 BLE 扫描测试 */
-		SEGGER_RTT_printf(0, "\n[BLE-TEST] === Starting scan cycle ===\n");
-		ble_scan_start_alert();  /* 4s 扫描 */
-
-		/* 等待扫描完成 */
-		while (ble_scan_active()) {
-			RT_SLEEP(rt, 100);
-		}
-
-		/* 打印结果 */
-		const struct ble_scan_result *r = ble_scan_get_result();
-		if (r->valid) {
-			SEGGER_RTT_printf(0, "[BLE-TEST] Result: MAC=%02X:%02X:%02X:%02X:%02X:%02X RSSI=%d room=%d\n",
-				r->hub_mac[5], r->hub_mac[4], r->hub_mac[3],
-				r->hub_mac[2], r->hub_mac[1], r->hub_mac[0],
-				r->rssi, r->room_id);
-		} else {
-			SEGGER_RTT_printf(0, "[BLE-TEST] No hub found\n");
-		}
-
-		/* 10s 间隔 */
-		SEGGER_RTT_printf(0, "[BLE-TEST] Next scan in 10s...\n");
-		RT_SLEEP(rt, 10000);
-	}
-
-#endif
-
 	RT_END(rt);
 }
 
@@ -261,15 +220,11 @@ void setup() {
 	SEGGER_RTT_printf(0, "=== STEP 1: BLE init ===\n");
 	ble_scan_init();
 
-#if LORAWAN_ENABLE
 	/* 2. LoRaWAN 初始化 */
 	SEGGER_RTT_printf(0, "=== STEP 2: LoRaWAN init (may reboot) ===\n");
 	app_hal_lorawan_init();
 	app_hal_set_downlink_cb(on_lora_downlink);
 	SEGGER_RTT_printf(0, "=== STEP 2 done ===\n");
-#else
-	SEGGER_RTT_printf(0, "=== STEP 2: LoRaWAN SKIPPED (LORAWAN_ENABLE=0) ===\n");
-#endif
 
 	/* 2. 协议引擎 + 告警 + 执行器 */
 	SEGGER_RTT_printf(0, "=== STEP 2: proto/alarm/actuator init ===\n");
@@ -357,12 +312,10 @@ void setup() {
 	}
 #endif
 
-#if LORAWAN_ENABLE
 	/* 7. 定时器 */
 	SEGGER_RTT_printf(0, "=== STEP 7: Timers ===\n");
 	api.system.timer.create(RAK_TIMER_0, periodic_timer_cb, RAK_TIMER_PERIODIC);
 	api.system.timer.start(RAK_TIMER_0, PERIODIC_TX_INTERVAL_MS, NULL);
-#endif
 
 	/* 8. Protothreads */
 	SEGGER_RTT_printf(0, "=== STEP 8: ALL DONE ===\n");
