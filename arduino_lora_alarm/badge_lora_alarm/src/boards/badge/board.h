@@ -28,7 +28,7 @@
 /* ── 功能开关 ── */
 #define GPS_ENABLE           1
 #define BLE_OBSERVER         1     /* BLE 扫描 (定位 Hub) */
-#define OLED_ENABLE          0
+#define OLED_ENABLE          1
 
 /* ── RGB LED (N-MOS PWM, 低电平导通) ── */
 #define LED_R_PIN            P0_03      /* 红灯, analogWrite */

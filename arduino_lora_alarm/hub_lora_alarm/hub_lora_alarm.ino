@@ -28,17 +28,11 @@ const char *repo_info   = "lora-alarm-hub";
 
 #include "src/boards/hub/board.h"
 
-/* ── 公共模块 ── */
-#include "nrf_log.h"
-
-/* 调试: SEGGER_RTT 直接输出 (绕过 sdk_config.h 兼容问题)
- * RUI3 已初始化 RTT (NRF_LOG_BACKEND_RTT), Channel 0 即用
+/* 调试: SEGGER_RTT 统一输出
  * SEGGER_RTT_printf 在 RUI3 core 中已链接, 只需 extern 声明 */
 extern "C" {
 int SEGGER_RTT_printf(unsigned BufferIndex, const char * sFormat, ...);
-int SEGGER_RTT_WriteString(unsigned BufferIndex, const char * s);
 }
-#define RTT_PRINTF(...)  SEGGER_RTT_printf(0, __VA_ARGS__)
 
 #include "src/app/join_state.h"
 #include "src/app/alarm_sm.h"
@@ -54,13 +48,10 @@ int SEGGER_RTT_WriteString(unsigned BufferIndex, const char * s);
 /* ── 常量 ── */
 #define HEARTBEAT_INTERVAL_MS       (HEARTBEAT_INTERVAL_SEC * 1000UL)
 #define POWER_REPORT_INTERVAL_MS    (POWER_REPORT_INTERVAL_SEC * 1000UL)
-#define WDT_FEED_INTERVAL_MS        30000UL
-
 /* ── 全局状态 ── */
 static volatile bool g_heartbeat_pending = false;
 static volatile bool g_power_report_pending = false;
 static uint8_t  last_power_pct = 255;
-static unsigned long last_wdt_feed_ms = 0;
 
 /* ── Protothread 控制块 ── */
 rt rtLora, rtActuator;
@@ -88,13 +79,13 @@ static void send_heartbeat(void) {
 	int len = proto_build_heartbeat(buf, sizeof(buf),
 		DEV_TYPE_HUB, config_get_group_id());
 	if (len <= 0) {
-		NRF_LOG_WARNING("Heartbeat build failed");
+		SEGGER_RTT_printf(0, "[WARN] Heartbeat build failed\n");
 		return;
 	}
 	if (app_hal_send(FPORT_HUB_UP, buf, len, false)) {
-		NRF_LOG_INFO("Heartbeat sent (%d bytes)", len);
+		SEGGER_RTT_printf(0, "[INFO] Heartbeat sent (%d bytes)\n", len);
 	} else {
-		NRF_LOG_WARNING("Heartbeat send failed! joined=%d len=%d",
+		SEGGER_RTT_printf(0, "[WARN] Heartbeat send failed! joined=%d len=%d\n",
 			app_hal_is_joined(), len);
 	}
 }
@@ -106,14 +97,14 @@ static void send_power_report(void) {
 	uint8_t buf[64];
 	int len = proto_build_power(buf, sizeof(buf), DEV_TYPE_HUB, pct);
 	if (len <= 0) {
-		NRF_LOG_WARNING("Power report build failed");
+		SEGGER_RTT_printf(0, "[WARN] Power report build failed\n");
 		return;
 	}
 	if (app_hal_send(FPORT_COMMON, buf, len, false)) {
 		last_power_pct = pct;
-		NRF_LOG_INFO("Power report: %d%% (%d bytes)", pct, len);
+		SEGGER_RTT_printf(0, "[INFO] Power report: %d%% (%d bytes)\n", pct, len);
 	} else {
-		NRF_LOG_WARNING("Power report send failed! joined=%d",
+		SEGGER_RTT_printf(0, "[WARN] Power report send failed! joined=%d\n",
 			app_hal_is_joined());
 	}
 }
@@ -144,19 +135,19 @@ int loraThread(struct rt *rt) {
 		RT_SLEEP(rt, 1000);
 	}
 
-	NRF_LOG_INFO( "=== LoRaWAN Joined ===");
+	SEGGER_RTT_printf(0, "[INFO]=== LoRaWAN Joined ===");
 
 	/* LoRaWAN 入网后 SoftDevice 可能挂起 BLE 广播, 重新拉起 */
 	SEGGER_RTT_printf(0, "BLE: re-start after LoRaWAN join\n");
 	ble_hub_adv_start();
 
 	/* 等待 Class B beacon lock (US915 信标周期 128s, 超时 130s) */
-	NRF_LOG_INFO("Waiting for Class B beacon lock...");
+	SEGGER_RTT_printf(0, "[INFO] Waiting for Class B beacon lock...\n");
 	for (int i = 0; i < 130; i++) {
 		if (app_hal_is_beacon_locked()) break;
 		RT_SLEEP(rt, 1000);
 	}
-	NRF_LOG_INFO("Beacon lock: %d", app_hal_is_beacon_locked());
+	SEGGER_RTT_printf(0, "[INFO] Beacon lock: %d\n", app_hal_is_beacon_locked());
 
 	/* 配置 Class B 多播组 (4 组, 用于下行告警广播) */
 	SEGGER_RTT_printf(0, "Setting up multicast groups...\n");
@@ -221,15 +212,18 @@ void setup() {
 	app_hal_set_downlink_cb(on_lora_downlink);
 	SEGGER_RTT_printf(0, "=== STEP 1 done (no reboot) ===\n");
 
-	/* 2. 协议引擎 + 告警 + 执行器 */
-	SEGGER_RTT_printf(0, "=== STEP 2: proto/alarm/actuator init ===\n");
+	/* 2. 协议引擎 */
+	SEGGER_RTT_printf(0, "=== STEP 2: proto init ===\n");
 	proto_engine_init();
-	alarm_sm_init();
-	actuator_mgr_init();
 
-	/* 3. Flash 配置 */
+	/* 3. Flash 配置 (必须在 actuator_mgr_init 之前) */
 	SEGGER_RTT_printf(0, "=== STEP 3: config_store_init ===\n");
 	config_store_init();
+
+	/* 4. 告警 + 执行器 */
+	SEGGER_RTT_printf(0, "=== STEP 4: alarm/actuator init ===\n");
+	alarm_sm_init();
+	actuator_mgr_init();
 
 	/* 4. 电源管理 */
 	SEGGER_RTT_printf(0, "=== STEP 4: power_mgr_init ===\n");
@@ -271,17 +265,12 @@ void loop() {
 	RT_SCHEDULE(loraThread(&rtLora));
 	RT_SCHEDULE(actuatorThread(&rtActuator));
 
-	/* WDT feed (30s) */
+	/* 心跳日志 (10s) */
+	static unsigned long last_log = 0;
 	unsigned long now = millis();
-	if (now - last_wdt_feed_ms >= WDT_FEED_INTERVAL_MS) {
-		last_wdt_feed_ms = now;
-	}
-
-	/* 心跳日志 (10s) — 确认系统活跃 */
-	static unsigned long last_beacon_log = 0;
-	if (now - last_beacon_log > 10000) {
-		last_beacon_log = now;
-		SEGGER_RTT_printf(0, "Heartbeat: joined=%d alarm=%d batt=%d%%\n",
+	if (now - last_log > 10000) {
+		last_log = now;
+		SEGGER_RTT_printf(0, "[ALIVE] joined=%d alarm=%d batt=%d%%\n",
 			app_hal_is_joined(),
 			alarm_sm_current_priority(),
 			power_mgr_get_battery_pct());

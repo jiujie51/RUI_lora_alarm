@@ -318,13 +318,13 @@ void setup() {
 		digitalWrite(OLED_PWR_PIN, HIGH);
 		pinMode(OLED_RES_PIN, OUTPUT);
 		digitalWrite(OLED_RES_PIN, HIGH);
-		delay(10);
-		Wire.begin();
-		Wire.beginTransmission(OLED_I2C_ADDR);
-		if (Wire.endTransmission() == 0)
-			SEGGER_RTT_printf(0, "found at 0x%02X\n", OLED_I2C_ADDR);
+		delay(100);  /* SSD1306 上电需 100ms */
+		Wire1.begin();  /* TWI1, 默认 P0.29(SDA) / P0.30(SCL) */
+		Wire1.beginTransmission(OLED_I2C_ADDR);
+		if (Wire1.endTransmission() == 0)
+			SEGGER_RTT_printf(0, "  OLED: found at 0x%02X\n", OLED_I2C_ADDR);
 		else
-			SEGGER_RTT_printf(0, "NOT FOUND\n");
+			SEGGER_RTT_printf(0, "  OLED: NOT FOUND\n");
 #endif
 
 		SEGGER_RTT_printf(0, "=== HW Self-Test DONE ===\n");

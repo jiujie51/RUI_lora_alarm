@@ -10,7 +10,9 @@
 #include "join_state.h"
 #include "../drv/led_strip.h"
 #include "../drv/buzzer_pwm.h"
-#include "nrf_log.h"
+#include "../config/config_store.h"
+
+extern "C" int SEGGER_RTT_printf(unsigned, const char*, ...);
 
 /* ── 入网状态显示方式 ──
  * 1 = LED 灯带显示 (蓝闪=JOINING, 红快闪=FAILED, 灭=JOINED)
@@ -89,8 +91,15 @@ static int apply_buzzer(uint8_t prio) {
 
 /* ── 初始化 ── */
 int actuator_mgr_init(void) {
-	memcpy(&config, &default_config, sizeof(config));
-	NRF_LOG_INFO("Actuator manager initialized (Hub, default config)");
+	const struct alarm_config *saved = config_get_alarm_config();
+	if (saved && saved->led_map[0].r != 0) {
+		memcpy(&config, saved, sizeof(config));
+		SEGGER_RTT_printf(0, "[INFO] Alarm config loaded from flash\n");
+	} else {
+		memcpy(&config, &default_config, sizeof(config));
+	}
+
+	SEGGER_RTT_printf(0, "[INFO] Actuator manager initialized (Hub)\n");
 	return 0;
 }
 
@@ -104,7 +113,7 @@ int actuator_mgr_sync(void) {
 	if (new_prio == current_alarm_priority && new_type == current_alarm_type)
 		goto tick;
 
-	NRF_LOG_INFO("Actuator sync: prio=%d type=%d (was prio=%d)",
+	SEGGER_RTT_printf(0, "[INFO] Actuator sync: prio=%d type=%d (was prio=%d)\n",
 		new_prio, new_type, current_alarm_priority);
 
 	current_alarm_priority = new_prio;
@@ -151,7 +160,7 @@ void actuator_mgr_tick(void) {
 	int js = get_join_state();
 	if (js != last_join_state) {
 		last_join_state = js;
-		NRF_LOG_INFO("Join state changed: %d", js);
+		SEGGER_RTT_printf(0, "[INFO] Join state changed: %d\n", js);
 		if (current_alarm_priority == ALARM_PRIO_NORMAL) {
 			actuator_show_join_status(js);
 		}
@@ -197,7 +206,7 @@ void actuator_show_join_status(int state) {
 	/* 日志模式 */
 	const char *name = (state >= 0 && state <= 4)
 		? join_state_names[state] : "UNKNOWN";
-	NRF_LOG_INFO("Join status: %s (%d)", name, state);
+	SEGGER_RTT_printf(0, "[INFO] Join status: %s (%d)\n", name, state);
 #endif
 }
 
