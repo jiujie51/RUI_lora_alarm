@@ -20,20 +20,20 @@ extern "C" int SEGGER_RTT_printf(unsigned, const char*, ...);
  * I2C 底层 — 软件 GPIO 位驱动 (对齐 examples/OLED/oled.c)
  *
  * 对齐参考代码: IIC_Start / IIC_Stop / Write_IIC_Byte / Write_IIC_Command / Write_IIC_Data
- * 开漏输出: LOW=驱动低, HIGH=释放总线(INPUT, 上拉电阻拉高), ~50kHz
+ * 推挽输出: LOW=OUTPUT+LOW(驱动低), HIGH=OUTPUT+HIGH(主动驱动高), 读ACK时切INPUT
  * ══════════════════════════════════════════════════════════ */
-#define I2C_SDA  OLED_SDA_PIN   /* P0.29 */
-#define I2C_SCL  OLED_SCL_PIN   /* P0.30 */
+#define I2C_SDA OLED_SCL_PIN// OLED_SDA_PIN   /* P0.29 */
+#define I2C_SCL OLED_SDA_PIN //OLED_SCL_PIN   /* P0.30 */
 
-/* 开漏: 拉低=OUTPUT+LOW, 拉高=INPUT(释放, 靠上拉) */
+/* 推挽: 拉低/拉高均由主机主动驱动 */
 static void sda_lo(void)  { pinMode(I2C_SDA, OUTPUT); digitalWrite(I2C_SDA, LOW); }
-static void sda_hi(void)  { pinMode(I2C_SDA, INPUT_PULLUP); }
-static int  sda_rd(void)  { return digitalRead(I2C_SDA); }
+static void sda_hi(void)  { pinMode(I2C_SDA, OUTPUT); digitalWrite(I2C_SDA, HIGH); }
+static int  sda_rd(void)  { pinMode(I2C_SDA, INPUT); return digitalRead(I2C_SDA); }
 /* SCL 始终由主机驱动, 用推挽 */
 static void scl_lo(void)  { digitalWrite(I2C_SCL, LOW); }
 static void scl_hi(void)  { digitalWrite(I2C_SCL, HIGH); }
 
-static void i2c_delay(void) { delayMicroseconds(8); }  /* ~50 kHz */
+static void i2c_delay(void) { delayMicroseconds(2); }  /* ~50 kHz */
 
 /* 对齐 IIC_Start: SDA↓ while SCL=H */
 static void i2c_start(void) {
@@ -58,13 +58,13 @@ static int i2c_write_byte(uint8_t byte) {
 		scl_hi(); i2c_delay();
 		scl_lo(); i2c_delay();
 	}
-	/* 第 9 个 SCL 脉冲: 释放 SDA, 读 ACK */
-	sda_hi();        /* 释放总线 (INPUT_PULLUP) */
+	/* 第 9 个 SCL 脉冲: 释放 SDA, 读 ACK (切 INPUT 读, 之后下个操作会切回 OUTPUT) */
+	sda_rd();         /* 切 INPUT 以读取 ACK */
 	i2c_delay();
-	scl_hi();        /* 第 9 个时钟上升沿 */
+	scl_hi();         /* 第 9 个时钟上升沿 */
 	i2c_delay();
-	int ack = (sda_rd() == 0);  /* slave 拉低 = ACK */
-	scl_lo();        /* 第 9 个时钟下降沿 */
+	int ack = (digitalRead(I2C_SDA) == 0);  /* slave 拉低 = ACK */
+	scl_lo();         /* 第 9 个时钟下降沿 */
 	i2c_delay();
 	return ack;
 }
@@ -197,11 +197,11 @@ static const uint8_t font8x16[][16] = {
  * OLED 初始化 (对齐 examples/OLED/oled.c OLED_Init)
  * ══════════════════════════════════════════════════════════ */
 int oled_init(void) {
-	/* SCL=输出高, SDA=开漏(初始化释放) */
+	/* SCL/SDA=推挽输出高 */
 	pinMode(I2C_SCL, OUTPUT); digitalWrite(I2C_SCL, HIGH);
-	pinMode(I2C_SDA, INPUT_PULLUP);  /* 开漏: 释放, 上拉保持高 */
+	pinMode(I2C_SDA, OUTPUT); digitalWrite(I2C_SDA, HIGH);  /* 推挽: 主动驱动高 */
 
-	SEGGER_RTT_printf(0, "[OLED] SW I2C init: SDA=P0.%d SCL=P0.%d addr=0x%02X\n",
+	SEGGER_RTT_printf(0, "[OLED] SW I2C init: SDA=P0.%d SCL=P0.%d addr=0x%02X (push-pull)\n",
 		I2C_SDA, I2C_SCL, SSD1306_ADDR);
 
 	/* SSD1306 初始化序列 (对齐 examples/OLED/oled.c OLED_Init) */
@@ -234,15 +234,11 @@ int oled_init(void) {
 	oled_write_cmd(0x14);
 	oled_write_cmd(0xAF); /* display on */
 
-	SEGGER_RTT_printf(0, "[OLED] Init done (SW I2C, SSD1306 128x64)\n");
+	SEGGER_RTT_printf(0, "[OLED] Init done (SW I2C push-pull, SSD1306 128x64)\n");
 	return 0;
 }
 
-/* ══════════════════════════════════════════════════════════
- * 显示函数 (对齐 examples/OLED/oled.c)
- * ══════════════════════════════════════════════════════════ */
-
-/* 设置 GDDRAM 指针位置, 对齐 OLED_Set_Pos */
+/* 设置 GDDRAM 指针, 对齐 OLED_Set_Pos */
 static void oled_set_pos(uint8_t x, uint8_t page) {
 	oled_write_cmd(0xB0 + page);
 	oled_write_cmd(((x & 0xF0) >> 4) | 0x10);
