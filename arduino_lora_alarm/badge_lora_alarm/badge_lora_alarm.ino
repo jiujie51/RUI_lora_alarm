@@ -45,6 +45,9 @@ int SEGGER_RTT_printf(unsigned BufferIndex, const char * sFormat, ...);
 #include "src/drv/led_strip.h"
 #include "src/drv/buzzer_pwm.h"
 #include "src/drv/gps_drv.h"
+#if OLED_ENABLE
+#include "src/drv/oled_drv.h"
+#endif
 #include "src/ui/badge_ui.h"
 #include "src/ble/ble_badge_scan.h"
 
@@ -59,6 +62,10 @@ int SEGGER_RTT_printf(unsigned BufferIndex, const char * sFormat, ...);
 /* ── 全局状态 ── */
 static volatile bool g_periodic_tx_pending = false;
 static uint8_t  last_power_pct = 255;
+
+#if OLED_ENABLE
+/* OLED: SSD1306 128x64 @ I2C 0x3C, NRF_TWIM1 (P0.29/SDA P0.30/SCL) */
+#endif
 
 /* ── Protothread 控制块 ── */
 rt rtLora, rtActuator;
@@ -221,7 +228,7 @@ int actuatorThread(struct rt *rt) {
  * setup()
  * ══════════════════════════════════════════════════════════ */
 void setup() {
-
+	delay(2000);
 	SEGGER_RTT_printf(0, "=== STEP 0: Boot (Badge) ===\n");
 	SEGGER_RTT_printf(0, "[INFO] === LoRa Alarm Badge v1.0 (RUI3) ===\n");
 
@@ -263,6 +270,21 @@ void setup() {
 #if GPS_ENABLE
 		SEGGER_RTT_printf(0, "=== STEP 6b: gps_drv_init ===\n");
 		gps_drv_init();
+#endif
+
+#if OLED_ENABLE
+		SEGGER_RTT_printf(0, "=== STEP 6c: oled_init ===\n");
+		pinMode(OLED_PWR_PIN, OUTPUT);
+		digitalWrite(OLED_PWR_PIN, HIGH);
+		delay(100);  /* SSD1306 上电稳定 */
+		pinMode(OLED_RES_PIN, OUTPUT);
+		digitalWrite(OLED_RES_PIN, LOW); delay(50);
+		digitalWrite(OLED_RES_PIN, HIGH); delay(100);
+		oled_init();
+		oled_clear();
+		oled_draw_string(0, 0, "LoRa Alarm");
+			oled_draw_string(0, 2, "Badge v1.0");
+		SEGGER_RTT_printf(0, "  OLED initialized (SSD1306 128x64)\n");
 #endif
 
 	/* 7. Badge UI (按键 + 两段式确认) */
@@ -312,19 +334,17 @@ void setup() {
 			(!r||!g||!b||!y) ? "SOME PRESSED" : "all released");
 
 #if OLED_ENABLE
-		/* OLED: I2C 扫描 */
-		SEGGER_RTT_printf(0, "  OLED: init...");
-		pinMode(OLED_PWR_PIN, OUTPUT);
-		digitalWrite(OLED_PWR_PIN, HIGH);
-		pinMode(OLED_RES_PIN, OUTPUT);
-		digitalWrite(OLED_RES_PIN, HIGH);
-		delay(100);  /* SSD1306 上电需 100ms */
-		Wire1.begin();  /* TWI1, 默认 P0.29(SDA) / P0.30(SCL) */
-		Wire1.beginTransmission(OLED_I2C_ADDR);
-		if (Wire1.endTransmission() == 0)
-			SEGGER_RTT_printf(0, "  OLED: found at 0x%02X\n", OLED_I2C_ADDR);
-		else
-			SEGGER_RTT_printf(0, "  OLED: NOT FOUND\n");
+		/* OLED: 全屏亮→灭→文字, 确认硬件通路 */
+		SEGGER_RTT_printf(0, "  OLED: test pattern...\n");
+		/* 全白 */
+			oled_fill_screen(0xFF); delay(300);
+			/* 棋盘格 */
+			oled_fill_screen(0x55); delay(300);
+			/* 文字 */
+			oled_clear();
+			oled_draw_string(0, 0, "Badge v1.0");
+			oled_draw_string(0, 2, "OLED OK!");
+		SEGGER_RTT_printf(0, "  OLED: OK\n");
 #endif
 
 		SEGGER_RTT_printf(0, "=== HW Self-Test DONE ===\n");
