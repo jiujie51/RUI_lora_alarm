@@ -11,6 +11,9 @@
 #include "../app/actuator_mgr.h"
 #include "../drv/buzzer_pwm.h"
 #include "../config/config_store.h"
+#if OLED_ENABLE
+#include "../drv/oled_drv.h"
+#endif
 
 extern "C" int SEGGER_RTT_printf(unsigned, const char*, ...);
 
@@ -205,13 +208,69 @@ static int handle_vibration_control(const uint8_t *data, uint8_t len) {
 	return 0;
 }
 
-/* ── CMD 0x08/0x09: LCD (暂未实现) ── */
+/* ── CMD 0x08: LCD Content ──
+ * 格式: group(1) + line1_len(1) + line1(line1_len) + line2_len(1) + line2(line2_len)
+ * OLED: 128x64, 8x16 字体, 每行 16 字符 */
 static int handle_lcd_content(const uint8_t *data, uint8_t len) {
-	(void)data; (void)len;
+	if (len < 3) { SEGGER_RTT_printf(0, "[WARN] CMD 0x08: need >=3 bytes\n"); return -22; }
+
+	uint8_t cmd_group = data[0];
+	if (!match_multicast(cmd_group, 0, device_group_id, device_room_id))
+		return -13;
+
+	uint8_t line1_len = data[1];
+	if (line1_len > 16) line1_len = 16;
+	uint8_t pos = 2;
+
+#if OLED_ENABLE
+	char line1[17] = {0};
+	if (line1_len > 0 && pos + line1_len <= len) {
+		memcpy(line1, &data[pos], line1_len);
+		pos += line1_len;
+	}
+
+	uint8_t line2_len = (pos < len) ? data[pos] : 0;
+	pos++;
+	char line2[17] = {0};
+	if (line2_len > 16) line2_len = 16;
+	if (line2_len > 0 && pos + line2_len <= len) {
+		memcpy(line2, &data[pos], line2_len);
+	}
+
+	oled_clear_line(0);
+	oled_draw_string(0, 0, line1);
+	oled_clear_line(2);
+	if (line2_len > 0) oled_draw_string(0, 2, line2);
+
+	SEGGER_RTT_printf(0, "[INFO] CMD 0x08 LCD: L1=\"%s\" L2=\"%s\"\n", line1, line2);
+#else
+	SEGGER_RTT_printf(0, "[INFO] CMD 0x08 LCD: OLED disabled\n");
+#endif
 	return 0;
 }
+
+/* ── CMD 0x09: LCD Line2 On/Off ──
+ * 格式: group(1) + enable(1) */
 static int handle_lcd_line2_onoff(const uint8_t *data, uint8_t len) {
-	(void)data; (void)len;
+	if (len < 2) { SEGGER_RTT_printf(0, "[WARN] CMD 0x09: need 2 bytes\n"); return -22; }
+
+	uint8_t cmd_group = data[0];
+	uint8_t enable    = data[1];
+
+	if (!match_multicast(cmd_group, 0, device_group_id, device_room_id))
+		return -13;
+
+#if OLED_ENABLE
+	if (enable) {
+		oled_display_on();
+	} else {
+		/* 仅关 line2 (清空 page 2-3), line1 保持 */
+		oled_clear_line(2);
+	}
+	SEGGER_RTT_printf(0, "[INFO] CMD 0x09 LCD Line2: %s\n", enable ? "ON" : "OFF");
+#else
+	SEGGER_RTT_printf(0, "[INFO] CMD 0x09 LCD Line2: OLED disabled\n");
+#endif
 	return 0;
 }
 

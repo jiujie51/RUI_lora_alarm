@@ -294,3 +294,25 @@ void oled_draw_string(int x, int page, const char *str) {
 		str++;
 	}
 }
+
+/* 开显示 */
+void oled_display_on(void) {
+	oled_write_cmd(0xAF);
+}
+
+/* 关显示 */
+void oled_display_off(void) {
+	oled_write_cmd(0xAE);
+}
+
+/* 清空指定 page 起的 2 行 (16px 字体占 2 个 page) */
+void oled_clear_line(uint8_t page) {
+	uint8_t col;
+	for (uint8_t p = page; p < page + 2 && p < 8; p++) {
+		oled_write_cmd(0xB0 + p);
+		oled_write_cmd(0x00);
+		oled_write_cmd(0x10);
+		for (col = 0; col < 128; col++)
+			oled_write_data(0x00);
+	}
+}

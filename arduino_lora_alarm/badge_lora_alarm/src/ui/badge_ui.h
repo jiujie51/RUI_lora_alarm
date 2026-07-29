@@ -12,5 +12,6 @@
 
 int  badge_ui_init(void);
 void badge_ui_poll(void);
+void badge_ui_show_join_status(int state);
 
 #endif /* BADGE_UI_H */

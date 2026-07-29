@@ -19,5 +19,8 @@ int  oled_init(void);
 void oled_clear(void);                       /* 清屏 (全黑), 对齐 OLED_Clear */
 void oled_fill_screen(uint8_t pattern);      /* 全屏填充, 对齐 fill_picture */
 void oled_draw_string(int x, int page, const char *str);  /* 字符串, page=页号0-7 */
+void oled_display_on(void);                  /* 开显示 (0xAF) */
+void oled_display_off(void);                 /* 关显示 (0xAE) */
+void oled_clear_line(uint8_t page);          /* 清空 2 行 (page ~ page+1, 16px) */
 
 #endif

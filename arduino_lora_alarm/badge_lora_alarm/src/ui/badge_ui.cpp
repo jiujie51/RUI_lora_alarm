@@ -1,13 +1,13 @@
 #include <stdint.h>
 /*
- * Badge UI — 两段式确认 + 按键→告警映射 + 上行触发
+ * Badge UI — 两段式确认 + 按键→告警映射 + 上行触发 + OLED 显示
  * 移植自 NCS badge_ui.c
  *
- * 简化: 无 OLED, 无 GPS, 无设备睡眠
- * 确认: 长按 3s → "Hold 2s" → 继续 2s → 触发
- *       松手取消 | 第二键按下中止
- * 组合: Yellow+Green 5s → Clear All
- *       Green+Blue 5s → Device toggle
+ * OLED 显示内容:
+ *   短按: 电池电量
+ *   长按: 告警确认提示
+ *   组合键: 操作结果
+ *   入网状态: 自动更新
  */
 #include <Arduino.h>
 #include "badge_ui.h"
@@ -19,12 +19,18 @@
 #include "../proto/proto_internal.h"
 #include "../ble/ble_badge_scan.h"
 #include "../drv/gps_drv.h"
+#include "../boards/badge/board.h"
+
+#if OLED_ENABLE
+#include "../drv/oled_drv.h"
+#endif
 
 extern "C" int SEGGER_RTT_printf(unsigned, const char*, ...);
 
 /* ── 确认时序 ── */
 #define CONFIRM_WINDOW_MS   2000  /* LONG 后需继续按住 2s */
 #define CANCEL_DISPLAY_MS   1500  /* "Cancelled" 显示持续时间 */
+#define LCD_WAKE_TIMEOUT_MS  10000 /* OLED 自动熄屏超时 */
 
 /* ── UI 状态 ── */
 enum ui_state {
@@ -40,6 +46,14 @@ static uint32_t ui_confirm_start_ms;  /* PENDING 开始时间 */
 static uint32_t ui_cancelled_ms;      /* CANCELLED 开始时间 */
 static bool     device_enabled = true;
 
+/* ── OLED 自动熄屏 ── */
+#if OLED_ENABLE
+static uint32_t ui_lcd_wake_ms;       /* OLED 最后唤醒时间 */
+#endif
+
+/* ── 入网状态跟踪 ── */
+static int last_join_state = -1;
+
 /* ── 按键→告警映射 ── */
 static const uint8_t btn_to_alarm[BTN_COUNT] = {
 	ALARM_TYPE_RED,    /* BTN_RED    = 0 */
@@ -48,8 +62,32 @@ static const uint8_t btn_to_alarm[BTN_COUNT] = {
 	ALARM_TYPE_GREEN,  /* BTN_GREEN  = 3 */
 };
 
+/* ── 告警名称数组 (OLED 显示, 按 alarm_type 索引, 对齐 NCS) ── */
+#if OLED_ENABLE
+static const char *alarm_names[] = {
+	[ALARM_TYPE_RED - 1]    = "CODE RED",
+	[ALARM_TYPE_BLUE - 1]   = "MEDICAL",
+	[ALARM_TYPE_YELLOW - 1] = "ADMIN",
+	[ALARM_TYPE_GREEN - 1]  = "ALL CLEAR",
+};
+
+/* ── OLED 辅助: 显示两行文字 ── */
+static void oled_show_two_lines(const char *line1, const char *line2) {
+	oled_clear_line(0);
+	if (line1) oled_draw_string(0, 0, line1);
+	oled_clear_line(2);
+	if (line2) oled_draw_string(0, 2, line2);
+}
+
+/* ── 唤醒 OLED ── */
+static void oled_wake(void) {
+	oled_display_on();
+	ui_lcd_wake_ms = millis();
+}
+#endif
+
 /* ── 告警名称 (日志用) ── */
-static const char *alarm_names[BTN_COUNT] = { "CODE RED", "CODE BLUE", "CODE YELLOW", "ALL CLEAR" };
+static const char *alarm_names_log[BTN_COUNT] = { "CODE RED", "CODE BLUE", "CODE YELLOW", "ALL CLEAR" };
 
 /* ── 辅助 ── */
 static void ui_confirm_reset(void) {
@@ -65,27 +103,33 @@ static void ui_trigger_alert(uint8_t alarm_type, uint8_t btn_id) {
 	if (alarm_type == ALARM_TYPE_GREEN) {
 		if (alarm_sm_current_priority() != ALARM_PRIO_CODE_RED) {
 			SEGGER_RTT_printf(0, "[INFO] Green — no Code Red active, ignored\n");
+#if OLED_ENABLE
+			oled_show_two_lines("No alarm to clear", NULL);
+#endif
 			return;
 		}
 		alarm_sm_all_clear();
 		SEGGER_RTT_printf(0, "[INFO] ALL CLEAR triggered by button %d\n", btn_id);
+#if OLED_ENABLE
+		oled_show_two_lines("ALL CLEAR", NULL);
+#endif
 	} else {
 		alarm_sm_set(alarm_type, ALARM_SRC_BADGE_BTN);
 		SEGGER_RTT_printf(0, "[INFO] Alarm type=%d triggered by button %d\n", alarm_type, btn_id);
+
+#if OLED_ENABLE
+		const char *name = (alarm_type >= 1 && alarm_type <= 4)
+			? alarm_names[alarm_type - 1] : "ALERT";
+		char line1[17];
+		snprintf(line1, sizeof(line1), "%-16s", name);
+		oled_show_two_lines(line1, "Sending alert...");
+#endif
 	}
 
 	actuator_mgr_sync();
 
-	/* 仅当 Class B beacon 锁定时才启动 BLE 扫描 + 上行
-	 * - 无 beacon lock: 上行会被 app_hal_send 阻塞, BLE 扫描无意义
-	 * - BLE 扫描可能干扰信标接收, 只在信标已锁定时使用
-	 */
-	// if (app_hal_is_beacon_locked()) {
-		ble_scan_start_alert();
-		pending_uplink_btn = btn_id;
-	// } else {
-	// 	SEGGER_RTT_printf(0, "[INFO] Beacon not locked, skip BLE scan and uplink\n");
-	// }
+	ble_scan_start_alert();
+	pending_uplink_btn = btn_id;
 }
 
 /* ── 发送按键上行 (BLE 扫描完成后调用) ── */
@@ -103,14 +147,12 @@ static void send_key_event_uplink(uint8_t btn_id) {
 	int32_t lon     = 0;
 
 	if (result->valid) {
-		/* BLE 扫描成功 → 用 Hub MAC 定位 */
 		rssi    = result->rssi;
 		hub_mac = result->hub_mac;
 		SEGGER_RTT_printf(0, "[UPLINK] BLE hub: MAC=%02X:%02X RSSI=%d room=%d\n",
 			hub_mac[0], hub_mac[1], hub_mac[2], hub_mac[3], hub_mac[4], hub_mac[5],
 			rssi, result->room_id);
 	} else {
-		/* BLE 扫描失败 → 后备 GPS */
 		SEGGER_RTT_printf(0, "[UPLINK] BLE no hub, fallback to GPS...\n");
 #if GPS_ENABLE
 		if (gps_drv_has_fix()) {
@@ -142,6 +184,13 @@ static void badge_ui_confirm_tick(void) {
 
 	switch (ui_st) {
 	case UI_IDLE:
+#if OLED_ENABLE
+		/* OLED 自动熄屏 (IDLE 状态超时) */
+		if (ui_lcd_wake_ms != 0 && (now - ui_lcd_wake_ms) >= LCD_WAKE_TIMEOUT_MS) {
+			oled_display_off();
+			ui_lcd_wake_ms = 0;
+		}
+#endif
 		return;
 
 	case UI_CONFIRM_PENDING: {
@@ -160,7 +209,7 @@ static void badge_ui_confirm_tick(void) {
 			uint32_t elapsed = now - ui_confirm_start_ms;
 			if (elapsed >= CONFIRM_WINDOW_MS) {
 				SEGGER_RTT_printf(0, "[INFO] Btn[%d] %s confirmed after %lums\n",
-					ui_confirm_btn, alarm_names[ui_confirm_btn], elapsed);
+					ui_confirm_btn, alarm_names_log[ui_confirm_btn], elapsed);
 				ui_trigger_alert(ui_confirm_alarm, ui_confirm_btn);
 				ui_confirm_reset();
 			}
@@ -170,6 +219,9 @@ static void badge_ui_confirm_tick(void) {
 				ui_confirm_btn);
 			ui_st = UI_CANCELLED;
 			ui_cancelled_ms = now;
+#if OLED_ENABLE
+			oled_show_two_lines("Cancelled", NULL);
+#endif
 		}
 		return;
 	}
@@ -192,10 +244,18 @@ static void on_button_event(uint8_t id, enum btn_event evt) {
 			SEGGER_RTT_printf(0, "[INFO] Combo: Reset (Clear All alarms)\n");
 			alarm_sm_clear_all();
 			actuator_all_off();
+#if OLED_ENABLE
+			oled_wake();
+			oled_show_two_lines("CLEAR ALL ALARMS", "Return to Normal");
+#endif
 		} else if (id == BTN_GREEN) {
 			/* Green+Blue 5s: Device disable/re-enable */
 			device_enabled = !device_enabled;
 			SEGGER_RTT_printf(0, "[INFO] Combo: Device %s\n", device_enabled ? "ENABLED" : "DISABLED");
+#if OLED_ENABLE
+			oled_wake();
+			oled_show_two_lines(device_enabled ? "DEVICE ENABLED" : "DEVICE DISABLED", NULL);
+#endif
 		}
 		return;
 	}
@@ -205,10 +265,23 @@ static void on_button_event(uint8_t id, enum btn_event evt) {
 		return;
 	}
 
+#if OLED_ENABLE
+	oled_wake();
+#endif
+
 	switch (evt) {
 	case BTN_EVENT_SHORT:
 		ui_confirm_reset();
-		SEGGER_RTT_printf(0, "[INFO] Btn[%d] SHORT: battery %d%%\n", id, power_mgr_get_battery_pct());
+		{
+			uint8_t pct = power_mgr_get_battery_pct();
+			SEGGER_RTT_printf(0, "[INFO] Btn[%d] SHORT: battery %d%%\n", id, pct);
+#if OLED_ENABLE
+			char line1[17];
+			snprintf(line1, sizeof(line1), "Battery: %d%%", pct);
+			const char *line2 = power_mgr_is_charging() ? "Charging" : NULL;
+			oled_show_two_lines(line1, line2);
+#endif
+		}
 		break;
 
 	case BTN_EVENT_LONG: {
@@ -218,7 +291,16 @@ static void on_button_event(uint8_t id, enum btn_event evt) {
 		ui_confirm_alarm = btn_to_alarm[id];
 		ui_confirm_start_ms = millis();
 		SEGGER_RTT_printf(0, "[INFO] Btn[%d] LONG — Hold 2s to confirm [%s]\n",
-			id, alarm_names[id]);
+			id, alarm_names_log[id]);
+#if OLED_ENABLE
+		{
+			const char *name = (ui_confirm_alarm >= 1 && ui_confirm_alarm <= 4)
+				? alarm_names[ui_confirm_alarm - 1] : "ALERT";
+			char line1[17];
+			snprintf(line1, sizeof(line1), "%-14s Hold 2s", name);
+			oled_show_two_lines(line1, "to confirm...");
+		}
+#endif
 		break;
 	}
 
@@ -226,6 +308,32 @@ static void on_button_event(uint8_t id, enum btn_event evt) {
 		break;
 	}
 }
+
+#if OLED_ENABLE
+/* ── 入网状态 OLED 显示 ── */
+void badge_ui_show_join_status(int state) {
+	switch (state) {
+	case 0: /* 未入网 */
+	case 1: /* JOINING */
+		oled_show_two_lines("LoRa Alarm Badge", "LoRa Joining...");
+		break;
+	case 2: /* WAIT — 入网等待重试 */
+		oled_show_two_lines("LoRa Alarm Badge", "Retry LoRa...");
+		break;
+	case 3: /* JOINED */
+		oled_show_two_lines("LoRaWAN OK", NULL);
+		break;
+	case 4: /* FAILED */
+		oled_show_two_lines("LoRa Alarm Badge", "Join Failed!");
+		break;
+	default:
+		break;
+	}
+	ui_lcd_wake_ms = millis();
+}
+#else
+void badge_ui_show_join_status(int state) { (void)state; }
+#endif
 
 /* ── 公共 API ── */
 int badge_ui_init(void) {
@@ -235,7 +343,14 @@ int badge_ui_init(void) {
 	button_sm_set_callback(on_button_event);
 	SEGGER_RTT_printf(0, "[UI] callback set\n");
 	ui_confirm_reset();
-	SEGGER_RTT_printf(0, "[INFO] Badge UI initialized (two-step confirm)\n");
+
+#if OLED_ENABLE
+	oled_wake();
+	badge_ui_show_join_status(0);
+#endif
+	last_join_state = app_hal_get_join_state();
+
+	SEGGER_RTT_printf(0, "[INFO] Badge UI initialized (two-step confirm + OLED)\n");
 	SEGGER_RTT_printf(0, "[UI] badge_ui_init done\n");
 	return 0;
 }
@@ -243,6 +358,16 @@ int badge_ui_init(void) {
 void badge_ui_poll(void) {
 	button_sm_poll();
 	badge_ui_confirm_tick();
+
+	/* 入网状态变化 → 更新 OLED */
+#if OLED_ENABLE
+	int state = app_hal_get_join_state();
+	if (state != last_join_state) {
+		last_join_state = state;
+		oled_wake();
+		badge_ui_show_join_status(state);
+	}
+#endif
 
 	/* BLE 扫描完成后发送按键上行 */
 	if (pending_uplink_btn != 0xFF && !ble_scan_active()) {

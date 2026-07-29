@@ -281,10 +281,6 @@ void setup() {
 		digitalWrite(OLED_RES_PIN, LOW); delay(50);
 		digitalWrite(OLED_RES_PIN, HIGH); delay(100);
 		oled_init();
-		delay(100);  /* SSD1306 上电稳定 */
-		oled_clear();
-		oled_draw_string(0, 0, "LoRa Alarm");
-			oled_draw_string(0, 2, "Badge v1.0");
 		SEGGER_RTT_printf(0, "  OLED initialized (SSD1306 128x64)\n");
 #endif
 
@@ -336,16 +332,16 @@ void setup() {
 
 #if OLED_ENABLE
 		/* OLED: 全屏亮→灭→文字, 确认硬件通路 */
-		SEGGER_RTT_printf(0, "  OLED: test pattern...\n");
-		/* 全白 */
-			oled_fill_screen(0xFF); delay(300);
-			/* 棋盘格 */
-			oled_fill_screen(0x55); delay(300);
-			/* 文字 */
-			oled_clear();
-			oled_draw_string(0, 0, "Badge v1.0");
-			oled_draw_string(0, 2, "OLED OK!");
-		SEGGER_RTT_printf(0, "  OLED: OK\n");
+		// SEGGER_RTT_printf(0, "  OLED: test pattern...\n");
+		// /* 全白 */
+		// 	oled_fill_screen(0xFF); delay(300);
+		// 	/* 棋盘格 */
+		// 	oled_fill_screen(0x55); delay(300);
+		// 	/* 文字 */
+		// 	oled_clear();
+		// 	oled_draw_string(0, 0, "Badge v1.0");
+		// 	oled_draw_string(0, 2, "OLED OK!");
+		// SEGGER_RTT_printf(0, "  OLED: OK\n");
 #endif
 
 		SEGGER_RTT_printf(0, "=== HW Self-Test DONE ===\n");
