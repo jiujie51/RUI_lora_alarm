@@ -25,15 +25,15 @@ extern "C" int SEGGER_RTT_printf(unsigned, const char*, ...);
 #define I2C_SDA OLED_SCL_PIN// OLED_SDA_PIN   /* P0.29 */
 #define I2C_SCL OLED_SDA_PIN //OLED_SCL_PIN   /* P0.30 */
 
-/* 推挽: 拉低/拉高均由主机主动驱动 */
-static void sda_lo(void)  { pinMode(I2C_SDA, OUTPUT); digitalWrite(I2C_SDA, LOW); }
-static void sda_hi(void)  { pinMode(I2C_SDA, OUTPUT); digitalWrite(I2C_SDA, HIGH); }
+/* 推挽: 拉低/拉高均由主机主动驱动 (先写值再开输出, 避免 OUT 旧值毛刺) */
+static void sda_lo(void)  { digitalWrite(I2C_SDA, LOW);  pinMode(I2C_SDA, OUTPUT); }
+static void sda_hi(void)  { digitalWrite(I2C_SDA, HIGH); pinMode(I2C_SDA, OUTPUT); }
 static int  sda_rd(void)  { pinMode(I2C_SDA, INPUT); return digitalRead(I2C_SDA); }
 /* SCL 始终由主机驱动, 用推挽 */
-static void scl_lo(void)  { digitalWrite(I2C_SCL, LOW); }
-static void scl_hi(void)  { digitalWrite(I2C_SCL, HIGH); }
+static void scl_lo(void)  { digitalWrite(I2C_SCL, LOW);  pinMode(I2C_SCL, OUTPUT); }
+static void scl_hi(void)  { digitalWrite(I2C_SCL, HIGH); pinMode(I2C_SCL, OUTPUT); }
 
-static void i2c_delay(void) { delayMicroseconds(2); }  /* ~50 kHz */
+static void i2c_delay(void) { delayMicroseconds(5); }  /* ~100 kHz, 软件 I2C 稳定 */
 
 /* 对齐 IIC_Start: SDA↓ while SCL=H */
 static void i2c_start(void) {

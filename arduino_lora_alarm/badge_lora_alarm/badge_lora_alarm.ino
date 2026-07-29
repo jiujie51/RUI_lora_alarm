@@ -281,6 +281,7 @@ void setup() {
 		digitalWrite(OLED_RES_PIN, LOW); delay(50);
 		digitalWrite(OLED_RES_PIN, HIGH); delay(100);
 		oled_init();
+		delay(100);  /* SSD1306 上电稳定 */
 		oled_clear();
 		oled_draw_string(0, 0, "LoRa Alarm");
 			oled_draw_string(0, 2, "Badge v1.0");
