@@ -143,10 +143,10 @@ int loraThread(struct rt *rt) {
 
 	/* 等待 Class B beacon lock (US915 信标周期 128s, 超时 130s) */
 	SEGGER_RTT_printf(0, "[INFO] Waiting for Class B beacon lock...\n");
-	for (int i = 0; i < 130; i++) {
-		if (app_hal_is_beacon_locked()) break;
-		RT_SLEEP(rt, 1000);
-	}
+	// for (int i = 0; i < 130; i++) {
+	// 	if (app_hal_is_beacon_locked()) break;
+	// 	RT_SLEEP(rt, 1000);
+	// }
 	SEGGER_RTT_printf(0, "[INFO] Beacon lock: %d\n", app_hal_is_beacon_locked());
 
 	/* 配置 Class B 多播组 (4 组, 用于下行告警广播) */

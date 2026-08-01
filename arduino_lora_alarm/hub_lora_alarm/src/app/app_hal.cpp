@@ -123,10 +123,10 @@ bool app_hal_send(uint8_t fport, const uint8_t *data, uint8_t len, bool confirme
 		NRF_LOG_WARNING("TX blocked: not joined");
 		return false;
 	}
-	if (!beacon_locked) {
-		NRF_LOG_WARNING("TX blocked: beacon not locked");
-		return false;
-	}
+	// if (!beacon_locked) {
+	// 	NRF_LOG_WARNING("TX blocked: beacon not locked");
+	// 	return false;
+	// }
 
 	for (int attempt = 0; attempt < 3; attempt++) {
 		if (api.lorawan.send(len, (uint8_t *)data, fport, confirmed, 3)) {
@@ -159,10 +159,10 @@ void app_hal_setup_multicast(void) {
 
 	for (int i = 0; i < num_groups; i++) {
 		RAK_LORA_McSession session = {
-			.McDevclass    = 2,              /* Class B */
+			.McDevclass    = 1,              /* Class B */
 			.McAddress     = groups[i].addr,
 			.McFrequency   = MC_FREQ_HZ,     /* 923.3 MHz */
-			.McDatarate    = MC_DATARATE,    /* DR13 = SF7/500kHz */
+			.McDatarate    = MC_DATARATE,    /* DR8 = SF12/500kHz */
 			.McPeriodicity = MC_PERIODICITY, /* 2^2 = 4s */
 			.McGroupID     = (int8_t)i,      /* 0=Red,1=Blue,2=Yellow,3=Green */
 			.entry         = 0,

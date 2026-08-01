@@ -22,8 +22,8 @@ extern "C" int SEGGER_RTT_printf(unsigned, const char*, ...);
  * 对齐参考代码: IIC_Start / IIC_Stop / Write_IIC_Byte / Write_IIC_Command / Write_IIC_Data
  * 推挽输出: LOW=OUTPUT+LOW(驱动低), HIGH=OUTPUT+HIGH(主动驱动高), 读ACK时切INPUT
  * ══════════════════════════════════════════════════════════ */
-#define I2C_SDA OLED_SCL_PIN// OLED_SDA_PIN   /* P0.29 */
-#define I2C_SCL OLED_SDA_PIN //OLED_SCL_PIN   /* P0.30 */
+#define I2C_SDA OLED_SDA_PIN   /* P0.29 */
+#define I2C_SCL OLED_SCL_PIN   /* P0.30 */
 
 /* 推挽: 拉低/拉高均由主机主动驱动 (先写值再开输出, 避免 OUT 旧值毛刺) */
 static void sda_lo(void)  { digitalWrite(I2C_SDA, LOW);  pinMode(I2C_SDA, OUTPUT); }

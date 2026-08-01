@@ -2,7 +2,7 @@
  * @Author: jiefengzhu focus_feng@163.com
  * @Date: 2026-07-21 23:45:52
  * @LastEditors: jiefengzhu focus_feng@163.com
- * @LastEditTime: 2026-07-22 19:59:41
+ * @LastEditTime: 2026-07-31 22:29:23
  * @FilePath: \RUI_lora_alarm\arduino_lora_alarm\hub_lora_alarm\src\boards\hub\board.h
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
@@ -30,10 +30,10 @@
 #define DEVICE_HUB_TYPE      0     /* 0=RoomHub, 1=DoorHub, 2=HallwayHub */
 
 /* ── LoRaWAN OTAA 凭证 (Hub1 — 十二年级教室) ── */
-#define OTAA_DEVEUI  {0x20, 0x26, 0x06, 0x18, 0x01, 0x00, 0x00, 0x02}
-#define OTAA_APPEUI  {0x8A, 0x61, 0x2A, 0x8B, 0x62, 0x0D, 0x6E, 0xBC}
-#define OTAA_APPKEY  {0xB7, 0xD1, 0x5D, 0x51, 0xA8, 0x0A, 0xFF, 0x45, \
-                      0x89, 0x67, 0x02, 0x21, 0x9F, 0x35, 0x28, 0x8A}
+#define OTAA_DEVEUI  {0x20, 0x26, 0x06, 0x18, 0x01, 0x00, 0x00, 0x01}
+#define OTAA_APPEUI  {0xD3, 0xA1, 0x80, 0x5B, 0x54, 0xFA, 0x11, 0x85}
+#define OTAA_APPKEY  {0x50, 0xAD, 0x90, 0x7A, 0xF0, 0x5F, 0x8C, 0x5B,\
+     0x45, 0x0F, 0x82, 0x1D, 0x83, 0x21, 0x67, 0x88}
 #define OTAA_BAND    RAK_REGION_US915
 
 /* ── 功能开关 ── */
@@ -71,7 +71,7 @@
  * 共享射频: US915, DR3(SF7/125kHz), 923.3MHz, 信标周期 4s
  */
 #define MC_FREQ_HZ           923300000
-#define MC_DATARATE          3           /* DR3 = SF7/BW125 (匹配 ChirpStack 配置) */
+#define MC_DATARATE          8           /* DR8 = SF12/500kHz (US915 下行 RX 范围 DR8-DR13) */
 #define MC_PERIODICITY       2           /* ping 周期 2^2 = 4s */
 
 /* 多播组 0: Code Red */

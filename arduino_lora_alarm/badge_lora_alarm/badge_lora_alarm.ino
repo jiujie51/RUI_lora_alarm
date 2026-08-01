@@ -1,4 +1,12 @@
 /*
+ * @Author: jiefengzhu focus_feng@163.com
+ * @Date: 2026-07-29 20:12:53
+ * @LastEditors: jiefengzhu focus_feng@163.com
+ * @LastEditTime: 2026-08-01 21:19:32
+ * @FilePath: \RUI_lora_alarm\arduino_lora_alarm\badge_lora_alarm\badge_lora_alarm.ino
+ * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
+ */
+/*
  * LoRa Alarm System — Badge Firmware (RUI3/Arduino)
  *
  * 硬件: RAK4630 (nRF52840 + SX1262)
@@ -148,21 +156,15 @@ int loraThread(struct rt *rt) {
 
 	/* LoRaWAN 入网后重置 BLE 扫描数据, 但不重启扫描器 (避免 SoftDevice 断言) */
 	SEGGER_RTT_printf(0, "BLE: re-init scanner after LoRaWAN join\n");
-	ble_scan_reinit();
-
-	/* 等待 Class B beacon lock (US915 信标周期 128s, 超时 130s) */
-	SEGGER_RTT_printf(0, "[INFO] Waiting for Class B beacon lock...\n");
-	for (int i = 0; i < 130; i++) {
-		if (app_hal_is_beacon_locked()) break;
-		RT_SLEEP(rt, 1000);
-	}
-	SEGGER_RTT_printf(0, "[INFO] Beacon lock: %d\n", app_hal_is_beacon_locked());
-
-	/* 配置 Class B 多播组 (4 组, 用于下行告警广播) */
-	SEGGER_RTT_printf(0, "Setting up multicast groups...\n");
-	app_hal_setup_multicast();
-
+	// ble_scan_reinit();
+	app_hal_lorawan_setup();
 	send_heartbeat();
+
+	/* 启动 Class B beacon 搜索 (非阻塞, 由主循环 app_hal_beacon_tick 驱动)
+	 * 上行消息(心跳/电量)不等待 beacon — 立即开始正常发送.
+	 * Beacon 搜索超时后自动回退 Class A, 并定期重试. */
+	app_hal_beacon_start();
+
 
 	/* 主循环: 消费 TX flag */
 	for (;;) {
@@ -186,6 +188,8 @@ int loraThread(struct rt *rt) {
 			uint32_t now = millis();
 			if (now - last_log > 10000) {
 				last_log = now;
+				app_hal_beacon_tick();
+				app_hal_dump_classb_status();
 				SEGGER_RTT_printf(0, "[ALIVE] joined=%d alarm=%d batt=%d%% chg=%d scan=%d gps=%d\n",
 					app_hal_is_joined(),
 					alarm_sm_current_priority(),
@@ -338,7 +342,7 @@ void setup() {
 		// 	/* 棋盘格 */
 		// 	oled_fill_screen(0x55); delay(300);
 		// 	/* 文字 */
-		// 	oled_clear();
+			oled_clear();
 		// 	oled_draw_string(0, 0, "Badge v1.0");
 		// 	oled_draw_string(0, 2, "OLED OK!");
 		// SEGGER_RTT_printf(0, "  OLED: OK\n");

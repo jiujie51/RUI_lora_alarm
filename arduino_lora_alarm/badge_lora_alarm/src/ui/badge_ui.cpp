@@ -136,7 +136,7 @@ static void ui_trigger_alert(uint8_t alarm_type, uint8_t btn_id) {
 static void send_key_event_uplink(uint8_t btn_id) {
 	SEGGER_RTT_printf(0, "[UPLINK] step1: check joined/locked\n");
 	if (!app_hal_is_joined()) return;
-	if (!app_hal_is_beacon_locked()) return;
+	// if (!app_hal_is_beacon_locked()) return;
 
 	SEGGER_RTT_printf(0, "[UPLINK] step2: get location\n");
 	const struct ble_scan_result *result = ble_scan_get_result();
