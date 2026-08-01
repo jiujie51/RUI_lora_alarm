@@ -250,11 +250,27 @@ int app_hal_get_join_state(void) { return join_state_val; }
 bool app_hal_is_beacon_locked(void) { return rx_beacon(); }
 
 /* ── Beacon 状态机: 非阻塞, 由主循环每 10s 调用 ── */
+static bool bcn_mc_done = false;  /* 多播已注册标志 */
+
 void app_hal_beacon_start(void) {
 	bcn_state = BCN_SEARCHING;
 	bcn_phase_start_ms = millis();
+	bcn_mc_done = false;
 	SEGGER_RTT_printf(0, "[BCN] state=SEARCHING (timeout=%lus)\n",
 		(unsigned long)(BCN_SEARCH_TIMEOUT_MS / 1000));
+}
+
+/* 进入 LOCKED 时调用 — 等待 Class B COMPLETED 后注册多播 */
+static void bcn_try_multicast(void) {
+	if (bcn_mc_done) return;
+
+	int32_t st = service_lora_get_class_b_state();
+	if (st == 4 /* COMPLETED */) {
+		SEGGER_RTT_printf(0, "[BCN] Class B COMPLETED, setting up multicast\r\n");
+		app_hal_setup_multicast();
+		bcn_mc_done = true;
+	}
+	/* 若仍为 S2, 等待下次 tick 重试 (PingSlotInfo 交换完成后自动触发) */
 }
 
 void app_hal_beacon_tick(void) {
@@ -272,7 +288,7 @@ void app_hal_beacon_tick(void) {
 			SEGGER_RTT_printf(0, "[BCN] Beacon locked! btime=%lu\r\n",
 				(unsigned long)api.lorawan.btime.get());
 			app_hal_dump_classb_status();
-			app_hal_setup_multicast();
+			bcn_try_multicast();
 		} else if (now - bcn_phase_start_ms > BCN_SEARCH_TIMEOUT_MS) {
 			bcn_state = BCN_FALLBACK;
 			bcn_next_retry_ms = now + BCN_RETRY_INTERVAL_MS;
@@ -283,20 +299,20 @@ void app_hal_beacon_tick(void) {
 		break;
 
 	case BCN_LOCKED:
-		/* btime 一旦 > 0 就不会清零; 若未来需要检测 beacon 丢失,
-		   可比较 btime 是否长时间未更新 */
+		/* 每 tick 检查 Class B 是否达到 COMPLETED, 然后注册多播 */
+		bcn_try_multicast();
 		break;
 
 	case BCN_FALLBACK:
 		if (has_bcn) {
 			bcn_state = BCN_LOCKED;
+			bcn_mc_done = false;
 			SEGGER_RTT_printf(0, "[BCN] Beacon recovered in fallback! btime=%lu\r\n",
 				(unsigned long)api.lorawan.btime.get());
-			app_hal_setup_multicast();
+			bcn_try_multicast();
 		} else if (now - bcn_next_retry_ms < 0x80000000UL /* now >= retry_ms */) {
 			bcn_state = BCN_RETRY;
 			bcn_phase_start_ms = now;
-			/* 重新触发 DeviceTimeReq, 驱动 Class B 状态机 S0→S1 */
 			api.lorawan.timereq.set(1);
 			SEGGER_RTT_printf(0, "[BCN] state=RETRY (retry interval elapsed)\r\n");
 		}
@@ -305,9 +321,10 @@ void app_hal_beacon_tick(void) {
 	case BCN_RETRY:
 		if (has_bcn) {
 			bcn_state = BCN_LOCKED;
+			bcn_mc_done = false;
 			SEGGER_RTT_printf(0, "[BCN] Beacon locked on retry! btime=%lu\r\n",
 				(unsigned long)api.lorawan.btime.get());
-			app_hal_setup_multicast();
+			bcn_try_multicast();
 		} else if (now - bcn_phase_start_ms > BCN_SEARCH_TIMEOUT_MS) {
 			bcn_state = BCN_FALLBACK;
 			bcn_next_retry_ms = now + BCN_RETRY_INTERVAL_MS;
@@ -399,9 +416,37 @@ void app_hal_setup_multicast(void) {
 		{ MC_GREEN_ADDR,  MC_GREEN_NWKSKEY,  MC_GREEN_APPSKEY },
 	};
 	const int num_groups = sizeof(groups) / sizeof(groups[0]);
-	int ok = 0;
 
+	/* 先用 lstmulc 遍历已存在的多播组, 打印并标记哪些地址已注册 */
+	bool already_exists[4] = {false, false, false, false};
+	SEGGER_RTT_printf(0, "[MC] Existing multicast groups:\r\n");
+	{
+		RAK_LORA_McSession existing;
+		memset(&existing, 0, sizeof(existing));
+		int cnt = 0;
+		while (api.lorawan.lstmulc(&existing)) {
+			SEGGER_RTT_printf(0, "[MC]   slot=%d cls=%d addr=0x%08X freq=%lu dr=%d\r\n",
+				existing.McGroupID, existing.McDevclass, existing.McAddress,
+				(unsigned long)existing.McFrequency, existing.McDatarate);
+			for (int j = 0; j < num_groups; j++) {
+				if (existing.McAddress == groups[j].addr)
+					already_exists[j] = true;
+			}
+			cnt++;
+		}
+		if (cnt == 0) SEGGER_RTT_printf(0, "[MC]   (none)\r\n");
+	}
+
+	/* 只注册不存在的组 */
+	int ok = 0;
 	for (int i = 0; i < num_groups; i++) {
+		if (already_exists[i]) {
+			SEGGER_RTT_printf(0, "[INFO] MC group %d SKIP (already exists): addr=0x%08X\n",
+				i, groups[i].addr);
+			ok++;
+			continue;
+		}
+
 		RAK_LORA_McSession session = {
 			.McDevclass    = 1,              /* Class B */
 			.McAddress     = groups[i].addr,
@@ -414,11 +459,18 @@ void app_hal_setup_multicast(void) {
 		memcpy(session.McAppSKey, groups[i].appskey, 16);
 		memcpy(session.McNwkSKey, groups[i].nwkskey, 16);
 
+		SEGGER_RTT_printf(0, "[MC] grp=%d cls=%d addr=0x%08X freq=%lu dr=%d period=%d\r\n",
+			i, session.McDevclass, session.McAddress,
+			(unsigned long)session.McFrequency, session.McDatarate,
+			session.McPeriodicity);
+
 		if (api.lorawan.addmulc(session)) {
 			SEGGER_RTT_printf(0, "[INFO] MC group %d OK: addr=0x%08X\n", i, groups[i].addr);
 			ok++;
 		} else {
-			SEGGER_RTT_printf(0, "[ERROR] MC group %d FAIL: addr=0x%08X\n", i, groups[i].addr);
+			int32_t st = service_lora_get_class_b_state();
+			SEGGER_RTT_printf(0, "[ERROR] MC group %d FAIL: addr=0x%08X (class_b_state=%ld/%s)\n",
+				i, groups[i].addr, st, cls_b_state_name(st));
 		}
 	}
 

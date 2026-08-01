@@ -26,7 +26,7 @@
 #define OTAA_BAND    RAK_REGION_US915
 
 /* ── 功能开关 ── */
-#define GPS_ENABLE           0
+#define GPS_ENABLE           1
 #define BLE_OBSERVER         1     /* BLE 扫描 (定位 Hub) */
 #define OLED_ENABLE          1
 

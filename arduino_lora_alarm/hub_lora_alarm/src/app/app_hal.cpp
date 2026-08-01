@@ -144,6 +144,12 @@ bool app_hal_send(uint8_t fport, const uint8_t *data, uint8_t len, bool confirme
  * 设备通过 match_multicast() (proto_handler.cpp) 决定是否响应.
  */
 void app_hal_setup_multicast(void) {
+	/* 先清除可能残留的旧多播组 (NVM 持久化可能导致地址冲突) */
+	api.lorawan.rmvmulc(MC_RED_ADDR);
+	api.lorawan.rmvmulc(MC_BLUE_ADDR);
+	api.lorawan.rmvmulc(MC_YELLOW_ADDR);
+	api.lorawan.rmvmulc(MC_GREEN_ADDR);
+
 	struct {
 		uint32_t addr;
 		uint8_t  nwkskey[16];
