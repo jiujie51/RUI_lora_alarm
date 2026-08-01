@@ -85,14 +85,7 @@ int get_join_state(void) {
 
 /* ── LoRaWAN 下行回调 ── */
 static void on_lora_downlink(uint8_t port, const uint8_t *data, uint8_t len) {
-	for (uint8_t i = 0; i < len; i++) {
-		if (proto_parser_feed(data[i]) == 1) {
-			static struct proto_frame frame;
-			if (proto_parser_get_frame(&frame) == 0) {
-				proto_handle_frame(&frame);
-			}
-		}
-	}
+	proto_parser_parse(data, len);
 }
 
 /* ── 上行函数 ── */

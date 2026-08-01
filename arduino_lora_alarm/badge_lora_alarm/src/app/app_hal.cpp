@@ -66,8 +66,21 @@ static const uint32_t join_backoff_ms[] = {10000, 20000, 40000, 60000, 60000, 60
 
 /* ── RUI3 下行回调 ── */
 static void ruiv3_recv_cb(SERVICE_LORA_RECEIVE_T *data) {
-	if (data->BufferSize > 0 && g_downlink_cb) {
-		g_downlink_cb(data->Port, data->Buffer, data->BufferSize);
+	SEGGER_RTT_printf(0, "[RX] Port=%u Size=%u DR=%u RSSI=%d SNR=%d FCnt=%lu\r\n",
+		data->Port, data->BufferSize, data->RxDatarate,
+		data->Rssi, data->Snr, (unsigned long)data->DownLinkCounter);
+
+	if (data->BufferSize > 0) {
+		/* Hex dump: 16 bytes per line */
+		SEGGER_RTT_printf(0, "[RX] ");
+		for (uint8_t i = 0; i < data->BufferSize; i++) {
+			SEGGER_RTT_printf(0, "%02X ", data->Buffer[i]);
+		}
+		SEGGER_RTT_printf(0, "\r\n");
+
+		if (g_downlink_cb) {
+			g_downlink_cb(data->Port, data->Buffer, data->BufferSize);
+		}
 	}
 }
 
@@ -166,7 +179,7 @@ void app_hal_lorawan_init(void) {
 	api.lorawan.appkey.set(app_key, 16);
 
 	api.lorawan.band.set(OTAA_BAND);
-	api.lorawan.pgslot.set(0);
+	api.lorawan.pgslot.set(2);
 	api.lorawan.deviceClass.set(RAK_LORA_CLASS_B);
 	api.lorawan.njm.set(RAK_LORA_OTAA);
 

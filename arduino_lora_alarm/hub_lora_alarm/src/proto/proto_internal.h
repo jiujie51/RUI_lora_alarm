@@ -59,16 +59,7 @@ void crc16_xmodem_init(void);
 void crc16_xmodem_append(const uint8_t *buf, uint16_t len);
 uint16_t crc16_xmodem_end(void);
 
-/* ── 帧解析器 ── */
-typedef enum {
-	PARSE_IDLE,
-	PARSE_HEAD,
-	PARSE_HEADER,
-	PARSE_DATA,
-	PARSE_DONE,
-	PARSE_ERROR,
-} parser_state_t;
-
+/* ── 帧解析器 (整 buffer 直接解析) ── */
 struct proto_frame {
 	uint8_t  ver;
 	uint8_t  control;
@@ -79,9 +70,7 @@ struct proto_frame {
 	uint8_t  data_len;
 };
 
-int proto_parser_feed(uint8_t byte);
-int proto_parser_get_frame(struct proto_frame *frame);
-void proto_parser_reset(void);
+int proto_parser_parse(const uint8_t *data, uint8_t len);
 
 /* ── 帧构建器 ── */
 int proto_build_heartbeat(uint8_t *buf, uint16_t buf_len,

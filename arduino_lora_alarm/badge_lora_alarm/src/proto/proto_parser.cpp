@@ -1,7 +1,7 @@
 #include <stdint.h>
 /*
- * 帧解析器 — 6 状态流式帧解析
- * 移植自 NCS: k_uptime_get() -> millis(), LOG_* -> SEGGER_RTT_printf
+ * 帧解析器 — 整 buffer 直接解析 (RUI3 recv_cb 模型)
+ * 串口 AT 由 RAK 内部处理, 此模块仅服务 LoRaWAN 下行完整帧
  */
 #include <Arduino.h>
 #include <string.h>
@@ -9,129 +9,72 @@
 
 extern "C" int SEGGER_RTT_printf(unsigned, const char*, ...);
 
-
-static parser_state_t state = PARSE_IDLE;
-static struct proto_frame rx_frame;
-static uint8_t data_idx;
-static uint32_t parse_start_ms;
-
-/* header 收集缓冲区: ver(1)+ctrl(1)+cmdid(1)+length(2)+crc(2) = 7 bytes */
-static uint8_t  hdr_buf[7];
-static uint8_t  hdr_idx;
-
-static void reset_parser(void)
+/*
+ * 解析完整帧 buffer, 校验通过后调用 proto_handle_frame
+ * 返回: 0=成功, -1=长度不足, -2=帧头错误, -3=CRC错误
+ */
+int proto_parser_parse(const uint8_t *data, uint8_t len)
 {
-	state = PARSE_IDLE;
-	memset(&rx_frame, 0, sizeof(rx_frame));
-	hdr_idx = 0;
-	data_idx = 0;
-	parse_start_ms = 0;
-}
-
-int proto_parser_feed(uint8_t byte)
-{
-	/* 超时检测：超过 5s 未完成自动重置 */
-	if (state != PARSE_IDLE &&
-	    (millis() - parse_start_ms) > PROTO_PARSE_TIMEOUT_MS) {
-		SEGGER_RTT_printf(0, "[WARN] Parser timeout, resetting\n");
-		reset_parser();
+	if (len < PROTO_MIN_FRAME_LEN) {
+		SEGGER_RTT_printf(0, "[PARSER] too short: %u < %u\n", len, PROTO_MIN_FRAME_LEN);
+		return -1;
 	}
 
-	switch (state) {
-	case PARSE_IDLE:
-		if (byte == PROTO_HEAD_HI) {
-			memset(&rx_frame, 0, sizeof(rx_frame));
-			data_idx = 0;
-			hdr_idx = 0;
-			state = PARSE_HEAD;
-		}
-		break;
-
-	case PARSE_HEAD:
-		if (byte == PROTO_HEAD_LO) {
-			state = PARSE_HEADER;
-			parse_start_ms = millis();
-		} else if (byte != PROTO_HEAD_HI) {
-			state = PARSE_IDLE;
-		}
-		break;
-
-	case PARSE_HEADER:
-		hdr_buf[hdr_idx++] = byte;
-		if (hdr_idx >= 7) {
-			rx_frame.ver     = hdr_buf[0];
-			rx_frame.control = hdr_buf[1];
-			rx_frame.cmdid   = hdr_buf[2];
-			rx_frame.length  = (hdr_buf[3] << 8) | hdr_buf[4];
-			rx_frame.recv_crc = (hdr_buf[5] << 8) | hdr_buf[6];
-
-			if (rx_frame.length < PROTO_MIN_FRAME_LEN ||
-			    rx_frame.length > PROTO_MAX_FRAME_LEN) {
-				SEGGER_RTT_printf(0, "[WARN] Invalid frame length: %d\n", rx_frame.length);
-				state = PARSE_ERROR;
-				break;
-			}
-
-			rx_frame.data_len = rx_frame.length - PROTO_MIN_FRAME_LEN;
-
-			if (rx_frame.data_len == 0) {
-				state = PARSE_DONE;
-			} else {
-				state = PARSE_DATA;
-			}
-			data_idx = 0;
-			hdr_idx = 0;
-		}
-		break;
-
-	case PARSE_DATA:
-		rx_frame.data[data_idx++] = byte;
-		if (data_idx >= rx_frame.data_len) {
-			state = PARSE_DONE;
-		}
-		break;
-
-	case PARSE_DONE:
-	case PARSE_ERROR:
-		break;
+	if (data[0] != PROTO_HEAD_HI || data[1] != PROTO_HEAD_LO) {
+		SEGGER_RTT_printf(0, "[PARSER] bad header: 0x%02X 0x%02X\n", data[0], data[1]);
+		return -2;
 	}
 
-	return (state == PARSE_DONE) ? 1 : 0;
-}
+	struct proto_frame frame;
+	memset(&frame, 0, sizeof(frame));
 
-int proto_parser_get_frame(struct proto_frame *frame)
-{
-	if (state != PARSE_DONE) return -11; /* -EAGAIN */
+	frame.ver     = data[2];
+	frame.control = data[3];
+	frame.cmdid   = data[4];
+	frame.length  = ((uint16_t)data[5] << 8) | data[6];
+	frame.recv_crc = ((uint16_t)data[7] << 8) | data[8];
 
+	if (frame.length < PROTO_MIN_FRAME_LEN ||
+	    frame.length > PROTO_MAX_FRAME_LEN) {
+		SEGGER_RTT_printf(0, "[PARSER] bad length: %u\n", frame.length);
+		return -1;
+	}
+
+	if (frame.length > len) {
+		SEGGER_RTT_printf(0, "[PARSER] truncated: need %u, got %u\n", frame.length, len);
+		return -1;
+	}
+
+	frame.data_len = frame.length - PROTO_MIN_FRAME_LEN;
+	if (frame.data_len > 0) {
+		memcpy(frame.data, &data[9], frame.data_len);
+	}
+
+	/* CRC 校验: prefix[7] = head(2)+ver(1)+ctrl(1)+cmdid(1)+length(2) */
 	uint8_t prefix[7] = {
 		PROTO_HEAD_HI, PROTO_HEAD_LO,
-		rx_frame.ver, rx_frame.control, rx_frame.cmdid,
-		(rx_frame.length >> 8) & 0xFF,
-		rx_frame.length & 0xFF
+		frame.ver, frame.control, frame.cmdid,
+		(uint8_t)(frame.length >> 8),
+		(uint8_t)(frame.length & 0xFF)
 	};
 
 	crc16_xmodem_init();
 	crc16_xmodem_append(prefix, sizeof(prefix));
-	crc16_xmodem_append(rx_frame.data, rx_frame.data_len);
+	crc16_xmodem_append(frame.data, frame.data_len);
 	uint16_t calc_crc = crc16_xmodem_end();
 
-	if (calc_crc != rx_frame.recv_crc) {
-		SEGGER_RTT_printf(0, "[WARN] CRC mismatch: calc=0x%04X recv=0x%04X\n",
-			calc_crc, rx_frame.recv_crc);
-		state = PARSE_IDLE;
-		return -74; /* -EBADMSG */
+	if (calc_crc != frame.recv_crc) {
+		SEGGER_RTT_printf(0, "[PARSER] CRC mismatch: calc=0x%04X recv=0x%04X\n",
+			calc_crc, frame.recv_crc);
+		return -3;
 	}
 
-	memcpy(frame, &rx_frame, sizeof(*frame));
-	state = PARSE_IDLE;
+	proto_handle_frame(&frame);
 	return 0;
 }
 
-void proto_parser_reset(void) { reset_parser(); }
-
 int proto_engine_init(void)
 {
-	reset_parser();
 	crc16_xmodem_init();
 	proto_handler_init();
 	SEGGER_RTT_printf(0, "[INFO] Protocol engine initialized\n");
