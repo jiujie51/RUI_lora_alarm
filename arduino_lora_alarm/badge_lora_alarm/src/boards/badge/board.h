@@ -30,16 +30,13 @@
 #define BLE_OBSERVER         1     /* BLE 扫描 (定位 Hub) */
 #define OLED_ENABLE          1
 
-/* ── RGB LED (N-MOS PWM, 低电平导通) ── */
+/* ── RGB LED (高电平输出) ── */
 #define LED_R_PIN            P0_03      /* 红灯, analogWrite */
 #define LED_G_PIN            P1_04      /* 绿灯, analogWrite */
 #define LED_B_PIN            P1_03      /* 蓝灯, analogWrite */
 #define LED_PWM_FREQ         490        /* analogWrite 固定频率 Hz */
 
-/* PWM 硬件映射 */
-#define LED_R_PWM            UDRV_PWM_0  /* app_pwm TIMER1 */
-#define LED_G_PWM            UDRV_PWM_1  /* app_pwm TIMER2 */
-#define LED_B_PWM            UDRV_PWM_2  /* app_pwm TIMER3 */
+/* LED PWM: NRF_PWM0 (硬件 EasyDMA, 不依赖 app_timer, 无 SoftDevice 冲突) */
 
 /* ── 蜂鸣器 (NPN 8050 驱动, P0.13) ── */
 #define BUZZER_PIN           P0_13

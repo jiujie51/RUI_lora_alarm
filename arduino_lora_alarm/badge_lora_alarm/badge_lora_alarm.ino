@@ -2,7 +2,7 @@
  * @Author: jiefengzhu focus_feng@163.com
  * @Date: 2026-07-29 20:12:53
  * @LastEditors: jiefengzhu focus_feng@163.com
- * @LastEditTime: 2026-08-01 21:19:32
+ * @LastEditTime: 2026-08-03 20:56:21
  * @FilePath: \RUI_lora_alarm\arduino_lora_alarm\badge_lora_alarm\badge_lora_alarm.ino
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
@@ -294,15 +294,28 @@ void setup() {
 	{
 		SEGGER_RTT_printf(0, "=== STEP 6.5: HW Self-Test ===\n");
 
-		/* LED: R→G→B 各 200ms (使用 udrv_pwm 直驱, 不干扰端口绑定) */
-		SEGGER_RTT_printf(0, "  LED: R...");
-		led_strip_set_all({128, 0, 0}); delay(200);
-		SEGGER_RTT_printf(0, "G...");
-		led_strip_set_all({0, 128, 0}); delay(200);
-		SEGGER_RTT_printf(0, "B...");
-		led_strip_set_all({0, 0, 128}); delay(200);
+		/* LED: PWM 输出 (电压钳位 0.65V-1.45V) */
+		SEGGER_RTT_printf(0, "  LED PWM test (R->G->B):\n");
+		led_strip_off();
+		// SEGGER_RTT_printf(0, "    OFF\n");
+		// delay(500);
+		// SEGGER_RTT_printf(0, "    RED...");
+		// led_strip_set_all({255, 0, 0}); delay(300);
+		// led_strip_off();
+		// SEGGER_RTT_printf(0, "OK\n");
+		// SEGGER_RTT_printf(0, "    GREEN...");
+		// led_strip_set_all({0, 255, 0}); delay(300);
+		// led_strip_off();
+		// SEGGER_RTT_printf(0, "OK\n");
+		// SEGGER_RTT_printf(0, "    BLUE...");
+		// led_strip_set_all({0, 0, 255}); delay(300);
+		// led_strip_off();
+		// SEGGER_RTT_printf(0, "OK\n");
+		// SEGGER_RTT_printf(0, "    WHITE...");
+		led_strip_set_all({255, 255, 255}); delay(500);
 		led_strip_off();
 		SEGGER_RTT_printf(0, "OK\n");
+		SEGGER_RTT_printf(0, "  LED PWM test done\n");
 
 		/* 马达: 100ms 短震 */
 		SEGGER_RTT_printf(0, "  Motor: pulse...");
@@ -316,6 +329,7 @@ void setup() {
 		buzzer_pwm_set(BUZZER_ON, 10, 0, 0); delay(150);
 		buzzer_pwm_off();
 		SEGGER_RTT_printf(0, "OK\n");
+
 
 		/* 按键: 读取电平 (上拉, 按下=0, badge_ui_init 已配置引脚) */
 		delay(5);

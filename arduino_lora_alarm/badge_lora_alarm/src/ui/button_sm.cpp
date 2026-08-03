@@ -36,6 +36,7 @@ struct combo_def {
 static const struct combo_def combos[] = {
 	{ BTN_BLUE,  BTN_YELLOW, BTN_BLUE  }, /* Blue+Yellow: Reset (清除所有告警) */
 	{ BTN_GREEN, BTN_BLUE,   BTN_GREEN  }, /* Green+Blue: Device toggle (禁用/启用) */
+	{ BTN_GREEN, BTN_YELLOW, BTN_YELLOW }, /* Green+Yellow: (预留) */
 };
 #define COMBO_COUNT (sizeof(combos) / sizeof(combos[0]))
 

@@ -128,13 +128,12 @@ bool app_hal_send(uint8_t fport, const uint8_t *data, uint8_t len, bool confirme
 	// 	return false;
 	// }
 
-	for (int attempt = 0; attempt < 3; attempt++) {
-		if (api.lorawan.send(len, (uint8_t *)data, fport, confirmed, 3)) {
-			return true;
-		}
-		NRF_LOG_WARNING("TX attempt %d/3 failed, retry in 2s...", attempt + 1);
-		delay(2000);
+	/* 非阻塞发送 — 不 delay 重试, 避免阻塞 actuatorThread */
+	if (api.lorawan.send(len, (uint8_t *)data, fport, confirmed, 3)) {
+		return true;
 	}
+	NRF_LOG_WARNING("TX failed fport=%d len=%d (radio busy)", fport, len);
+	return false;
 	return false;
 }
 

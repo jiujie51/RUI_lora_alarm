@@ -381,16 +381,11 @@ bool app_hal_send(uint8_t fport, const uint8_t *data, uint8_t len, bool confirme
 	// 	return false;
 	// }
 
-	for (int attempt = 0; attempt < 3; attempt++) {
-		SEGGER_RTT_printf(0, "[LORA] send fport=%d len=%d attempt=%d\n", fport, len, attempt);
-		if (api.lorawan.send(len, (uint8_t *)data, fport, confirmed, 3)) {
-			SEGGER_RTT_printf(0, "[LORA] send OK\n");
-			return true;
-		}
-		SEGGER_RTT_printf(0, "[LORA] send FAIL attempt=%d\n", attempt + 1);
-		SEGGER_RTT_printf(0, "[WARN] TX attempt %d/3 failed, retry in 2s...\n", attempt + 1);
-		delay(2000);
+	/* 非阻塞发送 — 不 delay 重试, 避免阻塞 actuatorThread 导致 LED/蜂鸣器冻结 */
+	if (api.lorawan.send(len, (uint8_t *)data, fport, confirmed, 3)) {
+		return true;
 	}
+	SEGGER_RTT_printf(0, "[LORA] send FAIL fport=%d len=%d (radio busy)\n", fport, len);
 	return false;
 }
 

@@ -64,8 +64,10 @@ static int apply_led(uint8_t prio) {
 	uint16_t on  = cfg->led_map[prio].on_ms;
 	uint16_t off = cfg->led_map[prio].off_ms;
 
+	SEGGER_RTT_printf(0, "[ACT] apply_led prio=%d mode=%d RGB=(%d,%d,%d) on=%d off=%d\n",
+		prio, m, c.r, c.g, c.b, on, off);
 	switch (m) {
-	case 0: return led_strip_off();
+	case 0: return led_strip_set_mode(LED_MODE_OFF, c, 0, 0);
 	case 1: return led_strip_set_mode(LED_MODE_ON, c, 0, 0);
 	case 2: return led_strip_set_mode(LED_MODE_BLINK, c, on, off);
 	case 4: return led_strip_set_mode(LED_MODE_FAST, c, on, off);
@@ -172,7 +174,7 @@ int actuator_vibration_override(uint8_t mode, uint16_t on_ms, uint16_t off_ms) {
 int actuator_all_off(void) {
 	override_active = false;
 	current_alarm_priority = ALARM_PRIO_NORMAL;
-	led_strip_off();
+	{ struct led_color off = {0,0,0}; led_strip_set_mode(LED_MODE_OFF, off, 0, 0); }
 	buzzer_pwm_off();
 	digitalWrite(MOTOR_PIN, LOW);
 	return 0;
