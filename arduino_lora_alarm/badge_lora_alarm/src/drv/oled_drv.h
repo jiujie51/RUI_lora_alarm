@@ -1,10 +1,10 @@
 /*
- * OLED SSD1306 驱动 — 直接寄存器操作 NRF_TWIM1 (绕过 RUI3 Wire1 缺陷)
+ * OLED SSD1306 驱动 — RUI3 hal_i2c (NRF_TWIM0, 硬件 I2C)
  *
- * RUI3 core.a 预编译时 TWI1_ENABLED=0, Wire1 硬件层被裁剪.
- * 本驱动直接操作 NRF_TWIM1 寄存器: P0.29(SDA) / P0.30(SCL).
+ * I2C: TWI0 @ P0.29(SDA) / P0.30(SCL), 400kHz
+ * API: rak_i2c_init / rak_i2c_simple_write
  *
- * 显示函数对齐 examples/OLED/oled.c: 直接写 GDDRAM, 无帧缓冲.
+ * 显示函数: 直接写 GDDRAM, 无帧缓冲
  */
 #ifndef OLED_DRV_H
 #define OLED_DRV_H

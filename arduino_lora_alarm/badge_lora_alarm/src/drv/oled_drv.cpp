@@ -1,14 +1,15 @@
 #include <stdint.h>
 /*
- * OLED SSD1306 128x64 I2C 驱动 — 软件 GPIO 位驱动
+ * OLED SSD1306 128x64 I2C 驱动 — 硬件 TWI0 (nrf_drv_twi)
  *
  * 硬件: RAK4630, SSD1306 @ 0x3C (7-bit I2C)
- *       P0.29 (SDA) / P0.30 (SCL)
+ *       P0.29 (SDA) / P0.30 (SCL) → NRF_TWIM0
  *
- * I2C 底层: 软件 GPIO 位驱动 (对齐 examples/OLED/oled.c)
- * 显示函数: 直接写 GDDRAM, 无帧缓冲 (对齐 examples/OLED/oled.c)
+ * I2C 底层: nrf_drv_twi (TWI0, 400kHz), 不依赖 hal_i2c (未被链接)
+ * 显示函数: 直接写 GDDRAM, 无帧缓冲
  */
 #include <Arduino.h>
+#include "nrf_drv_twi.h"
 #include "oled_drv.h"
 #include "../boards/badge/board.h"
 
@@ -16,83 +17,52 @@ extern "C" int SEGGER_RTT_printf(unsigned, const char*, ...);
 
 #define SSD1306_ADDR  0x3C   /* 7-bit I2C address */
 
-/* ══════════════════════════════════════════════════════════
- * I2C 底层 — 软件 GPIO 位驱动 (对齐 examples/OLED/oled.c)
- *
- * 对齐参考代码: IIC_Start / IIC_Stop / Write_IIC_Byte / Write_IIC_Command / Write_IIC_Data
- * 推挽输出: LOW=OUTPUT+LOW(驱动低), HIGH=OUTPUT+HIGH(主动驱动高), 读ACK时切INPUT
- * ══════════════════════════════════════════════════════════ */
-#define I2C_SDA OLED_SDA_PIN   /* P0.29 */
-#define I2C_SCL OLED_SCL_PIN   /* P0.30 */
+/* ── 硬件 I2C (TWI0, P0.29/P0.30, 400kHz) ── */
+static const nrf_drv_twi_t m_twi = NRF_DRV_TWI_INSTANCE(0);
+static volatile bool twi_xfer_done;
 
-/* 推挽: 拉低/拉高均由主机主动驱动 (先写值再开输出, 避免 OUT 旧值毛刺) */
-static void sda_lo(void)  { digitalWrite(I2C_SDA, LOW);  pinMode(I2C_SDA, OUTPUT); }
-static void sda_hi(void)  { digitalWrite(I2C_SDA, HIGH); pinMode(I2C_SDA, OUTPUT); }
-static int  sda_rd(void)  { pinMode(I2C_SDA, INPUT); return digitalRead(I2C_SDA); }
-/* SCL 始终由主机驱动, 用推挽 */
-static void scl_lo(void)  { digitalWrite(I2C_SCL, LOW);  pinMode(I2C_SCL, OUTPUT); }
-static void scl_hi(void)  { digitalWrite(I2C_SCL, HIGH); pinMode(I2C_SCL, OUTPUT); }
-
-static void i2c_delay(void) { delayMicroseconds(5); }  /* ~100 kHz, 软件 I2C 稳定 */
-
-/* 对齐 IIC_Start: SDA↓ while SCL=H */
-static void i2c_start(void) {
-	sda_hi(); scl_hi(); i2c_delay();
-	sda_lo(); i2c_delay();
-	scl_lo();
+static void twi_event_handler(nrf_drv_twi_evt_t const *p_event, void *p_context) {
+	(void)p_context;
+	if (p_event->type == NRF_DRV_TWI_EVT_DONE)
+		twi_xfer_done = true;
 }
 
-/* 对齐 IIC_Stop: SDA↑ while SCL=H */
-static void i2c_stop(void) {
-	sda_lo(); scl_lo(); i2c_delay();
-	scl_hi(); i2c_delay();
-	sda_hi(); i2c_delay();
-}
+static int i2c_hw_init(void) {
+	nrf_drv_twi_config_t twi_cfg = {
+		.scl                = OLED_SCL_PIN,       /* P0_30 */
+		.sda                = OLED_SDA_PIN,       /* P0_29 */
+		.frequency          = NRF_DRV_TWI_FREQ_100K,
+		.interrupt_priority = 6,                  /* 应用级, 低于 SoftDevice */
+		.clear_bus_init     = false,
+		.hold_bus_uninit    = false,
+	};
 
-/* 写一个字节 + 读 ACK, 对齐 Write_IIC_Byte + IIC_Wait_Ack */
-static int i2c_write_byte(uint8_t byte) {
-	uint8_t i;
-	for (i = 0; i < 8; i++) {
-		if (byte & 0x80) sda_hi(); else sda_lo();
-		byte <<= 1;
-		scl_hi(); i2c_delay();
-		scl_lo(); i2c_delay();
+	uint32_t ret = nrf_drv_twi_init(&m_twi, &twi_cfg, twi_event_handler, NULL);
+	if (ret != NRF_SUCCESS) {
+		SEGGER_RTT_printf(0, "[OLED] I2C init FAIL: %lu\n", ret);
+		return -1;
 	}
-	/* 第 9 个 SCL 脉冲: 释放 SDA, 读 ACK (切 INPUT 读, 之后下个操作会切回 OUTPUT) */
-	sda_rd();         /* 切 INPUT 以读取 ACK */
-	i2c_delay();
-	scl_hi();         /* 第 9 个时钟上升沿 */
-	i2c_delay();
-	int ack = (digitalRead(I2C_SDA) == 0);  /* slave 拉低 = ACK */
-	scl_lo();         /* 第 9 个时钟下降沿 */
-	i2c_delay();
-	return ack;
+	nrf_drv_twi_enable(&m_twi);
+
+	SEGGER_RTT_printf(0, "[OLED] HW TWI0 SDA=P0.%d SCL=P0.%d addr=0x%02X 100kHz\n",
+		OLED_SDA_PIN, OLED_SCL_PIN, SSD1306_ADDR);
+	return 0;
 }
 
-/* 对齐 OLED_WR_Byte: cmd=0 发命令, cmd=1 发数据 */
-static bool oled_ack_ok = true;  /* 仅首次失败时打印 */
-
+/* ── 写 SSD1306 ── */
 static void oled_write(uint8_t dat, int is_data) {
-	int ack[3];  /* [0]=addr, [1]=ctrl, [2]=data */
-	i2c_start();
-	ack[0] = i2c_write_byte(SSD1306_ADDR << 1);       /* 7-bit addr -> 8-bit write */
-	ack[1] = i2c_write_byte(is_data ? 0x40 : 0x00);   /* ctrl: 0x00=cmd, 0x40=data */
-	ack[2] = i2c_write_byte(dat);
-	i2c_stop();
-
-	if (oled_ack_ok && (!ack[0] || !ack[1] || !ack[2])) {
-		oled_ack_ok = false;
-		SEGGER_RTT_printf(0, "[OLED] ACK FAIL: addr=%d ctrl=%d data=%d "
-			"(cmd=0x%02X type=%s)\n",
-			ack[0], ack[1], ack[2],
-			dat, is_data ? "DATA" : "CMD");
+	uint8_t buf[2] = { is_data ? (uint8_t)0x40 : (uint8_t)0x00, dat };
+	twi_xfer_done = false;
+	uint32_t ret = nrf_drv_twi_tx(&m_twi, SSD1306_ADDR, buf, 2, false);
+	if (ret == NRF_SUCCESS) {
+		while (!twi_xfer_done);
 	}
 }
 #define oled_write_cmd(cmd)  oled_write(cmd, 0)
 #define oled_write_data(dat) oled_write(dat, 1)
 
 /* ══════════════════════════════════════════════════════════
- * 8x16 ASCII 字库 (来自 examples/OLED/oledfont.h F8X16[95][16])
+ * 8x16 ASCII 字库
  * ══════════════════════════════════════════════════════════ */
 static const uint8_t font8x16[][16] = {
 	{0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00}, /*  32 */
@@ -194,17 +164,11 @@ static const uint8_t font8x16[][16] = {
 #define FONT_MAX (sizeof(font8x16) / 16)
 
 /* ══════════════════════════════════════════════════════════
- * OLED 初始化 (对齐 examples/OLED/oled.c OLED_Init)
+ * OLED 初始化 — SSD1306 命令序列
  * ══════════════════════════════════════════════════════════ */
 int oled_init(void) {
-	/* SCL/SDA=推挽输出高 */
-	pinMode(I2C_SCL, OUTPUT); digitalWrite(I2C_SCL, HIGH);
-	pinMode(I2C_SDA, OUTPUT); digitalWrite(I2C_SDA, HIGH);  /* 推挽: 主动驱动高 */
+	if (i2c_hw_init() != 0) return -1;
 
-	SEGGER_RTT_printf(0, "[OLED] SW I2C init: SDA=P0.%d SCL=P0.%d addr=0x%02X (push-pull)\n",
-		I2C_SDA, I2C_SCL, SSD1306_ADDR);
-
-	/* SSD1306 初始化序列 (对齐 examples/OLED/oled.c OLED_Init) */
 	delay(200);
 	oled_write_cmd(0xAE); /* display off */
 	oled_write_cmd(0x00); /* set low column */
@@ -234,18 +198,18 @@ int oled_init(void) {
 	oled_write_cmd(0x14);
 	oled_write_cmd(0xAF); /* display on */
 
-	SEGGER_RTT_printf(0, "[OLED] Init done (SW I2C push-pull, SSD1306 128x64)\n");
+	SEGGER_RTT_printf(0, "[OLED] Init done (HW TWI0, SSD1306 128x64)\n");
 	return 0;
 }
 
-/* 设置 GDDRAM 指针, 对齐 OLED_Set_Pos */
+/* 设置 GDDRAM 指针 */
 static void oled_set_pos(uint8_t x, uint8_t page) {
 	oled_write_cmd(0xB0 + page);
 	oled_write_cmd(((x & 0xF0) >> 4) | 0x10);
 	oled_write_cmd(x & 0x0F);
 }
 
-/* 清屏 (全黑), 对齐 OLED_Clear */
+/* 清屏 */
 void oled_clear(void) {
 	uint8_t page, col;
 	for (page = 0; page < 8; page++) {
@@ -257,7 +221,7 @@ void oled_clear(void) {
 	}
 }
 
-/* 全屏填充, 对齐 fill_picture */
+/* 全屏填充 */
 void oled_fill_screen(uint8_t pattern) {
 	uint8_t page, col;
 	for (page = 0; page < 8; page++) {
@@ -269,23 +233,21 @@ void oled_fill_screen(uint8_t pattern) {
 	}
 }
 
-/* 在指定 page 显示一个 16px 字符, 对齐 OLED_ShowChar (size=16) */
+/* 在指定 page 显示一个 16px 字符 */
 static void oled_show_char(uint8_t x, uint8_t page, uint8_t chr) {
 	uint8_t c = chr - ' ';
 	if (c >= FONT_MAX) c = 0;
 
-	/* 上半部分 8 字节 */
 	oled_set_pos(x, page);
 	for (uint8_t i = 0; i < 8; i++)
 		oled_write_data(font8x16[c][i]);
 
-	/* 下半部分 8 字节 */
 	oled_set_pos(x, page + 1);
 	for (uint8_t i = 0; i < 8; i++)
 		oled_write_data(font8x16[c][i + 8]);
 }
 
-/* 字符串显示, 对齐 OLED_ShowString (Char_Size=16) */
+/* 字符串显示 */
 void oled_draw_string(int x, int page, const char *str) {
 	while (*str) {
 		oled_show_char((uint8_t)x, (uint8_t)page, (uint8_t)*str);
@@ -295,17 +257,10 @@ void oled_draw_string(int x, int page, const char *str) {
 	}
 }
 
-/* 开显示 */
-void oled_display_on(void) {
-	oled_write_cmd(0xAF);
-}
+void oled_display_on(void)  { oled_write_cmd(0xAF); }
+void oled_display_off(void) { oled_write_cmd(0xAE); }
 
-/* 关显示 */
-void oled_display_off(void) {
-	oled_write_cmd(0xAE);
-}
-
-/* 清空指定 page 起的 2 行 (16px 字体占 2 个 page) */
+/* 清空指定 page 起的 2 行 */
 void oled_clear_line(uint8_t page) {
 	uint8_t col;
 	for (uint8_t p = page; p < page + 2 && p < 8; p++) {
