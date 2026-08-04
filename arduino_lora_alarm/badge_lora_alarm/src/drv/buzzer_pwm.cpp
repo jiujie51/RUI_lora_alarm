@@ -82,11 +82,6 @@ int buzzer_pwm_init(void) {
 	SEGGER_RTT_printf(0, "[INFO] Buzzer initialized (TIMER4 ISR, pin P0_%d, %dHz, prio=%d)\n",
 		BUZZER_PIN, BUZZER_FREQ_HZ, BUZZER_IRQ_PRIO);
 
-	/* 短鸣自检 */
-	output_buzz(true);
-	delay(80);
-	output_buzz(false);
-
 	return 0;
 }
 

@@ -2,7 +2,7 @@
  * @Author: jiefengzhu focus_feng@163.com
  * @Date: 2026-07-29 20:12:53
  * @LastEditors: jiefengzhu focus_feng@163.com
- * @LastEditTime: 2026-08-03 20:56:21
+ * @LastEditTime: 2026-08-03 23:54:40
  * @FilePath: \RUI_lora_alarm\arduino_lora_alarm\badge_lora_alarm\badge_lora_alarm.ino
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
@@ -62,7 +62,7 @@ int SEGGER_RTT_printf(unsigned BufferIndex, const char * sFormat, ...);
 /* ── 常量 ── */
 #define PERIODIC_TX_INTERVAL_MS   (HEARTBEAT_INTERVAL_SEC * 1000UL)
 /* ── 硬件自检 ──
- * 1 = 上电后依次测试 LED/OLED/马达/蜂鸣器/按键
+ * 1 = 上电后依次测试 LED/OLED/马达/蜂鸣器/按键/GPS
  * 0 = 跳过
  */
 #define HW_SELF_TEST  1
@@ -261,6 +261,7 @@ void setup() {
 	/* 5. 硬件驱动 */
 	SEGGER_RTT_printf(0, "=== STEP 5: led_strip_init ===\n");
 	led_strip_init();
+	led_strip_set_all({0, 255, 0});//for test oled is init ok
 	SEGGER_RTT_printf(0, "=== STEP 6: buzzer_pwm_init ===\n");
 	buzzer_pwm_init();
 
@@ -340,6 +341,46 @@ void setup() {
 		SEGGER_RTT_printf(0, "  Buttons: R=%d G=%d B=%d Y=%d (%s)\n",
 			r, g, b, y,
 			(!r||!g||!b||!y) ? "SOME PRESSED" : "all released");
+
+#if GPS_ENABLE
+		/* GPS: 读取 NMEA 报文, RTT 输出 (超时 5s, 最多 10 行) */
+		{
+			SEGGER_RTT_printf(0, "  GPS: reading NMEA...\n");
+			uint32_t gps_start = millis();
+			uint8_t nmea_lines = 0;
+			char nmea_buf[128];
+			uint8_t nmea_pos = 0;
+			while (millis() - gps_start < 5000 && nmea_lines < 10) {
+				while (GPS_UART.available() > 0) {
+					char c = (char)GPS_UART.read();
+					if (c == '\n') {
+						if (nmea_pos > 0 && nmea_buf[nmea_pos - 1] == '\r')
+							nmea_buf[nmea_pos - 1] = '\0';
+						else nmea_buf[nmea_pos] = '\0';
+						if (nmea_buf[0] == '$')
+							SEGGER_RTT_printf(0, "  GPS[%d]: %s\n", nmea_lines, nmea_buf);
+						nmea_lines++;
+						nmea_pos = 0;
+					} else if (nmea_pos < (int)sizeof(nmea_buf) - 1) {
+						nmea_buf[nmea_pos++] = c;
+					}
+				}
+				delay(50);
+			}
+			
+			if (nmea_lines == 0)
+			{
+				SEGGER_RTT_printf(0, "  GPS: no NMEA data (check antenna/connection)\n");
+			}
+			else
+			{
+				buzzer_pwm_set(BUZZER_ON, 10, 0, 0); delay(150);
+				buzzer_pwm_off();
+			}
+			
+			SEGGER_RTT_printf(0, "  GPS test done (%d lines)\n", nmea_lines);
+		}
+#endif
 
 #if OLED_ENABLE
 		/* OLED: 全屏亮→灭→文字, 确认硬件通路 */

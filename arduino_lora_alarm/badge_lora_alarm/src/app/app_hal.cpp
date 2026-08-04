@@ -276,6 +276,7 @@ static void bcn_try_multicast(void) {
 void app_hal_beacon_tick(void) {
 	uint32_t now = millis();
 	bool has_bcn = rx_beacon();
+	int32_t lora_st = service_lora_get_class_b_state();
 
 	switch (bcn_state) {
 
@@ -289,12 +290,12 @@ void app_hal_beacon_tick(void) {
 				(unsigned long)api.lorawan.btime.get());
 			app_hal_dump_classb_status();
 			bcn_try_multicast();
-		} else if (now - bcn_phase_start_ms > BCN_SEARCH_TIMEOUT_MS) {
+		} else if (lora_st == 3 || now - bcn_phase_start_ms > BCN_SEARCH_TIMEOUT_MS) {
+			/* RUI3 内部 S3_BeaconFailed 或超时 → 立即回退, 不等满 130s */
 			bcn_state = BCN_FALLBACK;
 			bcn_next_retry_ms = now + BCN_RETRY_INTERVAL_MS;
-			SEGGER_RTT_printf(0, "[BCN] No beacon after %lus, fallback to Class A (retry in %lus)\r\n",
-				(unsigned long)(BCN_SEARCH_TIMEOUT_MS / 1000),
-				(unsigned long)(BCN_RETRY_INTERVAL_MS / 1000));
+			SEGGER_RTT_printf(0, "[BCN] No beacon after %lus (lora_st=%ld), fallback to Class A\r\n",
+				(unsigned long)((now - bcn_phase_start_ms) / 1000), lora_st);
 		}
 		break;
 
@@ -325,10 +326,11 @@ void app_hal_beacon_tick(void) {
 			SEGGER_RTT_printf(0, "[BCN] Beacon locked on retry! btime=%lu\r\n",
 				(unsigned long)api.lorawan.btime.get());
 			bcn_try_multicast();
-		} else if (now - bcn_phase_start_ms > BCN_SEARCH_TIMEOUT_MS) {
+		} else if (lora_st == 3 || now - bcn_phase_start_ms > BCN_SEARCH_TIMEOUT_MS) {
+			/* RUI3 内部 S3_BeaconFailed 或超时 → 立即回退 */
 			bcn_state = BCN_FALLBACK;
 			bcn_next_retry_ms = now + BCN_RETRY_INTERVAL_MS;
-			SEGGER_RTT_printf(0, "[BCN] Retry failed, fallback to Class A\r\n");
+			SEGGER_RTT_printf(0, "[BCN] Retry failed (lora_st=%ld), fallback to Class A\r\n", lora_st);
 		}
 		break;
 	}
