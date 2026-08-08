@@ -27,26 +27,26 @@ static struct persistent_config current_config;
 /* 默认 alarm_config (与 Hub actuator_mgr default_config 保持一致) */
 static const struct alarm_config default_alarm_cfg = {
 	.led_map = {
-		[0] = {255, 0,   0,   4, 300,  300},
-		[1] = {180, 0,   255, 2, 500,  500},
-		[2] = {255, 120, 0,   2, 500,  500},
-		[3] = {180, 0,   255, 1, 0,    0},
-		[4] = {180, 0,   255, 2, 1000, 1000},
-		[5] = {0,   80,  255, 2, 500,  500},
-		[6] = {255, 220, 0,   2, 500,  500},
-		[7] = {0,   255, 60,  1, 0,    0},
-		[8] = {0,   0,   0,   0, 0,    0},
+		[0] = {255, 0,   0,   4, 300,  300},   /* P0: Code Red */
+		[1] = {180, 0,   255, 2, 500,  500},   /* P1: Shelter */
+		[2] = {255, 120, 0,   2, 500,  500},   /* P2: Evacuate */
+		[3] = {180, 0,   255, 1, 0,    0},     /* P3: Secure */
+		[4] = {180, 0,   255, 2, 1000, 1000},  /* P4: Hold */
+		[5] = {0,   80,  255, 2, 500,  500},   /* P5: Code Blue */
+		[6] = {255, 220, 0,   2, 500,  500},   /* P6: Code Yellow */
+		[7] = {0,   255, 60,  1, 0,    0},     /* P7: All Clear */
+		[8] = {0,   0,   0,   0, 0,    0},     /* P8: Normal */
 	},
 	.buzzer_map = {
-		[0] = {2, 5,  120, 80 },
-		[1] = {2, 5,  500, 500},
-		[2] = {2, 5,  300, 700},
-		[3] = {2, 3,  200, 800},
-		[4] = {2, 3,  1000,1000},
-		[5] = {2, 4,  300, 700},
-		[6] = {2, 3,  500, 500},
-		[7] = {0, 0,  0,   0},
-		[8] = {0, 0,  0,   0},
+		[0] = {1, 10, 0,   0},                  /* Code Red: ON, 60s */
+		[1] = {2, 8,  500, 500},                /* Shelter */
+		[2] = {2, 8,  300, 700},                /* Evacuate */
+		[3] = {2, 5,  200, 800},                /* Secure */
+		[4] = {2, 5,  1000,1000},               /* Hold */
+		[5] = {2, 6,  500, 500},                /* Code Blue */
+		[6] = {2, 4,  500, 500},                /* Code Yellow */
+		[7] = {0, 0,  0,   0},                  /* All Clear */
+		[8] = {0, 0,  0,   0},                  /* Normal */
 	},
 };
 
@@ -110,7 +110,7 @@ int config_store_init(void) {
 	config_store_save();
 
 done:
-	SEGGER_RTT_printf(0, "[INFO] Config loaded (group=0x%02X room=%d)\n",
+	SEGGER_RTT_printf(0, "[INFO] Config loaded (group=0x%02X room=%d)\r\n",
 		current_config.group_id, current_config.room_id);
 	return 0;
 }
@@ -145,7 +145,7 @@ int config_store_factory_reset(void) {
 	memcpy(&current_config, &factory, sizeof(current_config));
 	current_config.crc32 = config_crc(&current_config);
 	config_valid = true;
-	SEGGER_RTT_printf(0, "[INFO] Factory reset complete\n");
+	SEGGER_RTT_printf(0, "[INFO] Factory reset complete\r\n");
 	return 0;
 }
 
@@ -163,7 +163,7 @@ const struct alarm_config *config_get_alarm_config(void) {
 void config_save_alarm_config(const struct alarm_config *cfg) {
 	memcpy(&current_config.alarm_cfg, cfg, sizeof(*cfg));
 	config_store_save();
-	SEGGER_RTT_printf(0, "[INFO] Alarm config saved to flash\n");
+	SEGGER_RTT_printf(0, "[INFO] Alarm config saved to flash\r\n");
 }
 
 bool config_is_valid(void) { return config_valid; }

@@ -10,6 +10,7 @@
 #include "../app/join_state.h"
 #include "../proto/proto_internal.h"
 #include "../boards/badge/board.h"
+#include "../config/device_identity.h"
 
 extern "C" int SEGGER_RTT_printf(unsigned, const char*, ...);
 
@@ -170,13 +171,21 @@ void app_hal_lorawan_init(void) {
 		api.system.reboot();
 	}
 
-	uint8_t dev_eui[8]  = OTAA_DEVEUI;
-	uint8_t join_eui[8] = OTAA_APPEUI;
-	uint8_t app_key[16] = OTAA_APPKEY;
-
-	api.lorawan.deui.set(dev_eui, 8);
-	api.lorawan.appeui.set(join_eui, 8);
-	api.lorawan.appkey.set(app_key, 16);
+	/* 从 flash 读取设备身份 (BLE MAC + LoRaWAN 凭证) */
+	const struct device_identity *id = device_identity_get();
+	if (device_identity_is_valid()) {
+		api.lorawan.deui.set((uint8_t *)id->dev_eui, 8);
+		api.lorawan.appeui.set((uint8_t *)id->app_eui, 8);
+		api.lorawan.appkey.set((uint8_t *)id->app_key, 16);
+	} else {
+		/* fallback: 编译期默认凭证 */
+		uint8_t dev_eui[8]  = OTAA_DEVEUI;
+		uint8_t join_eui[8] = OTAA_APPEUI;
+		uint8_t app_key[16] = OTAA_APPKEY;
+		api.lorawan.deui.set(dev_eui, 8);
+		api.lorawan.appeui.set(join_eui, 8);
+		api.lorawan.appkey.set(app_key, 16);
+	}
 
 	api.lorawan.band.set(OTAA_BAND);
 	api.lorawan.pgslot.set(2);

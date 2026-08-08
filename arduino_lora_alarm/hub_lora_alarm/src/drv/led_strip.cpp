@@ -12,7 +12,7 @@
 #include "led_strip.h"
 #include "../app/actuator_mgr.h"
 #include "../boards/hub/board.h"
-#include "nrf_log.h"
+extern "C" int SEGGER_RTT_printf(unsigned, const char*, ...);
 
 
 static Adafruit_NeoPixel strip(LED_STRIP_NUM_LEDS, LED_STRIP_PIN,
@@ -43,7 +43,7 @@ int led_strip_init(void) {
 	strip.show();
 	strip.setBrightness(255);  /* 最大亮度, per-color scaling 由 scale() 处理 */
 
-	NRF_LOG_INFO("LED strip initialized (%d LEDs, pin P0_%d)",
+	SEGGER_RTT_printf(0, "[INFO] LED strip initialized (%d LEDs, pin P0_%d)\r\n",
 		LED_STRIP_NUM_LEDS, LED_STRIP_PIN);
 	return 0;
 }

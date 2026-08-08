@@ -11,7 +11,7 @@
 #include "../app/actuator_mgr.h"
 #include "../drv/buzzer_pwm.h"
 #include "../config/config_store.h"
-#include "nrf_log.h"
+extern "C" int SEGGER_RTT_printf(unsigned, const char*, ...);
 
 
 /* ── 协议 ↔ 内部 值翻译 ── */
@@ -52,7 +52,7 @@ static bool match_multicast(uint8_t cmd_group, uint8_t cmd_room,
 
 /* ── CMD 0x03: Code ── */
 static int handle_code(const uint8_t *data, uint8_t len) {
-	if (len < 2) { NRF_LOG_WARNING("CMD 0x03: need >=2 bytes"); return -22; }
+	if (len < 2) { SEGGER_RTT_printf(0, "[WARN] CMD 0x03: need >=2 bytes\r\n"); return -22; }
 
 	uint8_t cmd_group   = data[0];
 	uint8_t proto_alarm = data[1];
@@ -63,11 +63,11 @@ static int handle_code(const uint8_t *data, uint8_t len) {
 
 	uint8_t alarm_type = proto_alarm_to_internal(proto_alarm);
 	if (alarm_type == 0xFF) {
-		NRF_LOG_WARNING("CMD 0x03: unknown proto alarm %d", proto_alarm);
+		SEGGER_RTT_printf(0, "[WARN] CMD 0x03: unknown proto alarm %d\r\n", proto_alarm);
 		return -22;
 	}
 
-	NRF_LOG_INFO("CMD 0x03 Code: group=0x%02X alarm=%d -> internal=%d",
+	SEGGER_RTT_printf(0, "[INFO] CMD 0x03 Code: group=0x%02X alarm=%d -> internal=%d\r\n",
 		cmd_group, proto_alarm, alarm_type);
 
 	int ret = alarm_sm_set(alarm_type, ALARM_SRC_LORAWAN);
@@ -77,7 +77,7 @@ static int handle_code(const uint8_t *data, uint8_t len) {
 
 /* ── CMD 0x04: Code Setting ── */
 static int handle_code_setting(const uint8_t *data, uint8_t len) {
-	if (len < 24) { NRF_LOG_WARNING("CMD 0x04: need 24 bytes"); return -22; }
+	if (len < 24) { SEGGER_RTT_printf(0, "[WARN] CMD 0x04: need 24 bytes\r\n"); return -22; }
 
 	uint8_t cmd_group   = data[0];
 	uint8_t proto_alarm = data[1];
@@ -119,15 +119,16 @@ static int handle_code_setting(const uint8_t *data, uint8_t len) {
 	}
 
 	actuator_set_config(&cfg);
+	config_save_alarm_config(&cfg);
 
-	NRF_LOG_INFO("CMD 0x04: config updated alarm=%d prio=%d led=(%d,%d,%d) vol=%d",
+	SEGGER_RTT_printf(0, "[INFO] CMD 0x04: config updated+persisted alarm=%d prio=%d led=(%d,%d,%d) vol=%d\r\n",
 		proto_alarm, prio, led_r, led_g, led_b, volume);
 	return 0;
 }
 
 /* ── CMD 0x05: LED Control ── */
 static int handle_led_control(const uint8_t *data, uint8_t len) {
-	if (len < 15) { NRF_LOG_WARNING("CMD 0x05: need 15 bytes"); return -22; }
+	if (len < 15) { SEGGER_RTT_printf(0, "[WARN] CMD 0x05: need 15 bytes\r\n"); return -22; }
 
 	uint8_t cmd_group = data[0];
 	uint8_t mode_sw   = data[2];
@@ -154,7 +155,7 @@ static int handle_led_control(const uint8_t *data, uint8_t len) {
 
 /* ── CMD 0x06: Buzzer Control ── */
 static int handle_buzzer_control(const uint8_t *data, uint8_t len) {
-	if (len < 12) { NRF_LOG_WARNING("CMD 0x06: need 12 bytes"); return -22; }
+	if (len < 12) { SEGGER_RTT_printf(0, "[WARN] CMD 0x06: need 12 bytes\r\n"); return -22; }
 
 	uint8_t cmd_group = data[0];
 	uint8_t mode_sw   = data[1];
@@ -192,7 +193,7 @@ static int handle_lcd_line2_onoff(const uint8_t *data, uint8_t len) {
 
 /* ── CMD 0x0A: Clear Packet ── */
 static int handle_clear_packet(const uint8_t *data, uint8_t len) {
-	if (len < 2) { NRF_LOG_WARNING("CMD 0x0A: need 2 bytes"); return -22; }
+	if (len < 2) { SEGGER_RTT_printf(0, "[WARN] CMD 0x0A: need 2 bytes\r\n"); return -22; }
 
 	uint8_t cmd_group  = data[0];
 	uint8_t clear_type = data[1];
@@ -202,10 +203,10 @@ static int handle_clear_packet(const uint8_t *data, uint8_t len) {
 		return -13;
 
 	if (clear_type == 0) {
-		NRF_LOG_INFO("CMD 0x0A: Clear All");
+		SEGGER_RTT_printf(0, "[INFO] CMD 0x0A: Clear All\r\n");
 		alarm_sm_clear_all();
 	} else if (clear_type == 1) {
-		NRF_LOG_INFO("CMD 0x0A: All Clear (Code Red only)");
+		SEGGER_RTT_printf(0, "[INFO] CMD 0x0A: All Clear (Code Red only)\r\n");
 		alarm_sm_all_clear();
 	} else {
 		return -22;
@@ -217,10 +218,10 @@ static int handle_clear_packet(const uint8_t *data, uint8_t len) {
 
 /* ── CMD 0x50: Set Group ID ── */
 static int handle_set_group_id(const uint8_t *data, uint8_t len) {
-	if (len < 1) { NRF_LOG_WARNING("CMD 0x50: need >=1 byte"); return -22; }
+	if (len < 1) { SEGGER_RTT_printf(0, "[WARN] CMD 0x50: need >=1 byte\r\n"); return -22; }
 
 	uint8_t new_group = data[0];
-	NRF_LOG_INFO("CMD 0x50: Set Group ID: 0x%02X -> 0x%02X",
+	SEGGER_RTT_printf(0, "[INFO] CMD 0x50: Set Group ID: 0x%02X -> 0x%02X\r\n",
 		device_group_id, new_group);
 
 	device_group_id = new_group;

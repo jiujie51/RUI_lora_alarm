@@ -16,7 +16,6 @@
 #include "ble_hub_adv.h"
 #include "../proto/proto_internal.h"
 #include "../boards/hub/board.h"
-#include "nrf_log.h"
 
 /* SEGGER_RTT 直写 — 绕过 NRF_LOG backend */
 extern "C" {

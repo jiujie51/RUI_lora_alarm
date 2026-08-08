@@ -6,7 +6,7 @@
 #include <Arduino.h>
 #include <string.h>
 #include "alarm_sm.h"
-#include "nrf_log.h"
+extern "C" int SEGGER_RTT_printf(unsigned, const char*, ...);
 
 #define MAX_ACTIVE_ALARMS  8
 
@@ -56,7 +56,7 @@ int alarm_sm_init(void) {
 	init_type_to_prio();
 	memset(active_alarms, 0, sizeof(active_alarms));
 	active_count = 0;
-	NRF_LOG_INFO("Alarm state machine initialized");
+	SEGGER_RTT_printf(0, "[INFO] Alarm state machine initialized\r\n");
 	return 0;
 }
 
@@ -68,7 +68,7 @@ static bool is_valid_alarm_type(uint8_t t) {
 
 int alarm_sm_set(uint8_t alarm_type, uint8_t source) {
 	if (!is_valid_alarm_type(alarm_type)) {
-		NRF_LOG_WARNING("Unknown alarm type: 0x%02X", alarm_type);
+		SEGGER_RTT_printf(0, "[WARN] Unknown alarm type: 0x%02X\r\n", alarm_type);
 		return -22; /* -EINVAL */
 	}
 
@@ -76,14 +76,14 @@ int alarm_sm_set(uint8_t alarm_type, uint8_t source) {
 
 	if (alarm_type == ALARM_TYPE_GREEN) {
 		if (active_count > 0 && active_alarms[0].priority == ALARM_PRIO_CODE_RED) {
-			NRF_LOG_INFO("Green re-press while Red active — Red stays");
+			SEGGER_RTT_printf(0, "[INFO] Green re-press while Red active — Red stays\r\n");
 			return 0;
 		}
 	}
 
 	if (active_count > 0 && active_alarms[0].priority == ALARM_PRIO_CODE_RED
 	    && new_prio != ALARM_PRIO_CODE_RED) {
-		NRF_LOG_INFO("Red active — alarm type=%d recorded but output stays Red", alarm_type);
+		SEGGER_RTT_printf(0, "[INFO] Red active — alarm type=%d recorded but output stays Red\r\n", alarm_type);
 	}
 
 	int existing = find_alarm(alarm_type);
@@ -94,7 +94,7 @@ int alarm_sm_set(uint8_t alarm_type, uint8_t source) {
 	}
 
 	if (active_count >= MAX_ACTIVE_ALARMS) {
-		NRF_LOG_ERROR("Too many active alarms (max %d)", MAX_ACTIVE_ALARMS);
+		SEGGER_RTT_printf(0, "[ERROR] Too many active alarms (max %d)\r\n", MAX_ACTIVE_ALARMS);
 		return -12; /* -ENOMEM */
 	}
 
@@ -106,7 +106,7 @@ int alarm_sm_set(uint8_t alarm_type, uint8_t source) {
 
 	sort_by_priority();
 
-	NRF_LOG_INFO("Alarm set: type=%d prio=%d src=%d (active=%d, top=%d)",
+	SEGGER_RTT_printf(0, "[INFO] Alarm set: type=%d prio=%d src=%d (active=%d, top=%d)\r\n",
 		alarm_type, new_prio, source, active_count,
 		active_count > 0 ? active_alarms[0].priority : -1);
 	return 0;
@@ -118,7 +118,7 @@ int alarm_sm_clear(uint8_t alarm_type) {
 	int idx = find_alarm(alarm_type);
 	if (idx < 0) return -2; /* -ENOENT */
 
-	NRF_LOG_INFO("Alarm cleared: type=%d prio=%d",
+	SEGGER_RTT_printf(0, "[INFO] Alarm cleared: type=%d prio=%d\r\n",
 		active_alarms[idx].type, active_alarms[idx].priority);
 	remove_alarm_at(idx);
 	return 0;
@@ -128,7 +128,7 @@ int alarm_sm_all_clear(void) {
 	if (active_count == 0 || active_alarms[0].priority != ALARM_PRIO_CODE_RED)
 		return -2;
 
-	NRF_LOG_INFO("All Clear: removing Code Red");
+	SEGGER_RTT_printf(0, "[INFO] All Clear: removing Code Red\r\n");
 	remove_alarm_at(0);
 	sort_by_priority();
 	return 0;
@@ -137,7 +137,7 @@ int alarm_sm_all_clear(void) {
 int alarm_sm_clear_all(void) {
 	memset(active_alarms, 0, sizeof(active_alarms));
 	active_count = 0;
-	NRF_LOG_INFO("Clear All: all alarms removed");
+	SEGGER_RTT_printf(0, "[INFO] Clear All: all alarms removed\r\n");
 	return 0;
 }
 

@@ -6,7 +6,8 @@
 #include <Arduino.h>
 #include <string.h>
 #include "proto_internal.h"
-#include "nrf_log.h"
+
+extern "C" int SEGGER_RTT_printf(unsigned, const char*, ...);
 
 /*
  * 解析完整帧 buffer, 校验通过后调用 proto_handle_frame
@@ -15,12 +16,12 @@
 int proto_parser_parse(const uint8_t *data, uint8_t len)
 {
 	if (len < PROTO_MIN_FRAME_LEN) {
-		NRF_LOG_WARNING("Parser too short: %u < %u", len, PROTO_MIN_FRAME_LEN);
+		SEGGER_RTT_printf(0, "[WARN] Parser too short: %u < %u\r\n", len, PROTO_MIN_FRAME_LEN);
 		return -1;
 	}
 
 	if (data[0] != PROTO_HEAD_HI || data[1] != PROTO_HEAD_LO) {
-		NRF_LOG_WARNING("Parser bad header: 0x%02X 0x%02X", data[0], data[1]);
+		SEGGER_RTT_printf(0, "[WARN] Parser bad header: 0x%02X 0x%02X\r\n", data[0], data[1]);
 		return -2;
 	}
 
@@ -35,12 +36,12 @@ int proto_parser_parse(const uint8_t *data, uint8_t len)
 
 	if (frame.length < PROTO_MIN_FRAME_LEN ||
 	    frame.length > PROTO_MAX_FRAME_LEN) {
-		NRF_LOG_WARNING("Parser bad length: %u", frame.length);
+		SEGGER_RTT_printf(0, "[WARN] Parser bad length: %u\r\n", frame.length);
 		return -1;
 	}
 
 	if (frame.length > len) {
-		NRF_LOG_WARNING("Parser truncated: need %u, got %u", frame.length, len);
+		SEGGER_RTT_printf(0, "[WARN] Parser truncated: need %u, got %u\r\n", frame.length, len);
 		return -1;
 	}
 
@@ -63,7 +64,7 @@ int proto_parser_parse(const uint8_t *data, uint8_t len)
 	uint16_t calc_crc = crc16_xmodem_end();
 
 	if (calc_crc != frame.recv_crc) {
-		NRF_LOG_WARNING("Parser CRC mismatch: calc=0x%04X recv=0x%04X",
+		SEGGER_RTT_printf(0, "[WARN] Parser CRC mismatch: calc=0x%04X recv=0x%04X\r\n",
 			calc_crc, frame.recv_crc);
 		return -3;
 	}
@@ -76,6 +77,6 @@ int proto_engine_init(void)
 {
 	crc16_xmodem_init();
 	proto_handler_init();
-	NRF_LOG_INFO("Protocol engine initialized");
+	SEGGER_RTT_printf(0, "[INFO] Protocol engine initialized\r\n");
 	return 0;
 }

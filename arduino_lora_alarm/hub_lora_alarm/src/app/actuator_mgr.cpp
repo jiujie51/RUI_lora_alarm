@@ -64,6 +64,8 @@ static int apply_led(uint8_t prio) {
 	uint16_t on  = cfg->led_map[prio].on_ms;
 	uint16_t off = cfg->led_map[prio].off_ms;
 
+	SEGGER_RTT_printf(0, "[ACT] apply_led prio=%d mode=%d RGB=(%d,%d,%d) on=%d off=%d\r\n",
+		prio, m, c.r, c.g, c.b, on, off);
 	switch (m) {
 	case 0: return led_strip_off();
 	case 1: return led_strip_set_mode(LED_MODE_ON, c, 0, 0);

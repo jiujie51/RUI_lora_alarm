@@ -1,0 +1,17 @@
+nRF52840 物理地址空间（nrfjprog 视角）       0x00000000 ───────────────────────────── 0x000FFFFF (1MB)
+  ├── Bootloader:  0x00000000 ~ 0x00026FFF
+  ├── Application: 0x00027000 ~ 0x000AEFFF
+  ├── Factory:     0x000AF000
+  ├── User Data:   0x000B0000 ~ 0x000CFFFF  ← RUI3 api.system.flash 操作区域
+  │   └── identity: 0x000B4000             ← 绝对物理地址
+  └── System:      0x000D0000 ~ 0x000FFFFF
+
+  RUI3 api.system.flash 视角
+
+  RUI3 把 User Data 区的起始地址 0x000B0000 当作偏移 0x0000：
+  RUI3 offset 0x0000 = 物理 0x000B0000
+  RUI3 offset 0x4000 = 物理 0x000B4000  ← DEVICE_IDENTITY_FLASH_OFFSET
+
+  所以固件代码用 api.system.flash.get(0x4000, ...)，RUI3 内部自动加 0xB0000 变成物理地址 0x000B4000。
+  
+python tools/gen_identity.py --deveui 2026061800000001 --appeui B6AC3C8700677DD6  --appkey AF96095F9889BE31261274B69ED7FCDE  --read-mac

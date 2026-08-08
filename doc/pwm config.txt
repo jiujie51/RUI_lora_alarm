@@ -1,0 +1,458 @@
+PWM — Pulse width modulation
+Last update
+Jun 3, 2026
+Product Specifications
+nRF52840
+The pulse with modulation (PWM) module enables the generation of pulse width modulated signals on GPIO. The module implements an up or up-and-down counter with four PWM channels that drive assigned GPIOs.
+
+The following are the main features of a PWM module:
+
+Programmable PWM frequency
+Up to four PWM channels with individual polarity and duty cycle values
+Edge or center-aligned pulses across PWM channels
+Multiple duty cycle arrays (sequences) defined in RAM
+Autonomous and glitch-free update of duty cycle values directly from memory through EasyDMA (no CPU involvement)
+Change of polarity, duty cycle, and base frequency possibly on every PWM period
+RAM sequences can be repeated or connected into loops
+Figure 1. PWM module
+
+PWM module
+Wave counter
+The wave counter is responsible for generating the pulses at a duty cycle that depends on the compare values, and at a frequency that depends on COUNTERTOP.
+
+There is one common 15-bit counter with four compare channels. Thus, all four channels will share the same period (PWM frequency), but can have individual duty cycle and polarity. The polarity is set by the most significant bit (MSb) of the 16-bit value read from RAM (see figure Decoder memory access modes ). When the MSb is '1' the channel is configured as FallingEdge polarity, OUT[n] starts high to become low during the given PWM cycle, whereas the inverse occurs when configured for RisingEdge polarity. Whether the counter counts up, or up and down, is controlled by the MODE register.
+
+The timer top value is controlled by the COUNTERTOP register. This register value, in conjunction with the selected PRESCALER of the PWM_CLK, will result in a given PWM period. A COUNTERTOP value smaller than the compare setting will result in a state where no PWM edges are generated. OUT[n] is held high, given that the polarity is set to FallingEdge. All compare registers are internal and can only be configured through decoder presented later. COUNTERTOP can be safely written at any time.
+
+Sampling follows the START task. If DECODER.LOAD=WaveForm, the register value is ignored and taken from RAM instead (see section Decoder with EasyDMA for more details). If DECODER.LOAD is anything else than the WaveForm, it is sampled following a STARTSEQ[n] task and when loading a new value from RAM during a sequence playback.
+
+The following figure shows the counter operating in up mode (MODE=PWM_MODE_Up), with two PWM channels with the same frequency but different duty cycle:
+
+Figure 2. PWM counter in up mode example - RisingEdge polarity
+
+PWM counter in up mode example - RisingEdge Polarity
+
+The counter is automatically reset to zero when COUNTERTOP is reached and OUT[n] will invert. OUT[n] is held low if the compare value is 0 and held high if set to COUNTERTOP, given that the polarity is set to FallingEdge. Counter running in up mode results in pulse widths that are edge-aligned. The following is the code for the counter in up mode example:
+
+uint16_t pwm_seq[4] = {PWM_CH0_DUTY, PWM_CH1_DUTY, PWM_CH2_DUTY, PWM_CH3_DUTY};
+NRF_PWM0->PSEL.OUT[0] = (first_pin << PWM_PSEL_OUT_PIN_Pos) | 
+                        (PWM_PSEL_OUT_CONNECT_Connected <<
+                                                 PWM_PSEL_OUT_CONNECT_Pos);
+NRF_PWM0->PSEL.OUT[1] = (second_pin << PWM_PSEL_OUT_PIN_Pos) | 
+                        (PWM_PSEL_OUT_CONNECT_Connected <<
+                                                 PWM_PSEL_OUT_CONNECT_Pos);
+NRF_PWM0->ENABLE      = (PWM_ENABLE_ENABLE_Enabled << PWM_ENABLE_ENABLE_Pos);
+NRF_PWM0->MODE        = (PWM_MODE_UPDOWN_Up << PWM_MODE_UPDOWN_Pos);
+NRF_PWM0->PRESCALER   = (PWM_PRESCALER_PRESCALER_DIV_1 <<
+                                                 PWM_PRESCALER_PRESCALER_Pos);
+NRF_PWM0->COUNTERTOP  = (16000 << PWM_COUNTERTOP_COUNTERTOP_Pos); //1 msec
+NRF_PWM0->LOOP        = (PWM_LOOP_CNT_Disabled << PWM_LOOP_CNT_Pos);
+NRF_PWM0->DECODER   = (PWM_DECODER_LOAD_Individual << PWM_DECODER_LOAD_Pos) | 
+                      (PWM_DECODER_MODE_RefreshCount << PWM_DECODER_MODE_Pos);
+NRF_PWM0->SEQ[0].PTR  = ((uint32_t)(pwm_seq) << PWM_SEQ_PTR_PTR_Pos);
+NRF_PWM0->SEQ[0].CNT  = ((sizeof(pwm_seq) / sizeof(uint16_t)) <<
+                                                 PWM_SEQ_CNT_CNT_Pos);
+NRF_PWM0->SEQ[0].REFRESH  = 0;
+NRF_PWM0->SEQ[0].ENDDELAY = 0;
+NRF_PWM0->TASKS_SEQSTART[0] = 1;
+   
+  
+When the counter is running in up mode, the following formula can be used to compute the PWM period and the step size:
+
+PWM period: TPWM(Up)= TPWM_CLK * COUNTERTOP
+
+Step width/Resolution: Tsteps= TPWM_CLK
+
+The following figure shows the counter operating in up-and-down mode (MODE=PWM_MODE_UpAndDown), with two PWM channels with the same frequency but different duty cycle and output polarity:
+
+Figure 3. PWM counter in up-and-down mode example
+
+COUNTERTOP
+COMP0
+COMP1
+OUT[0]
+OUT[1]
+
+The counter starts decrementing to zero when COUNTERTOP is reached and will invert the OUT[n] when compare value is hit for the second time. This results in a set of pulses that are center-aligned. The following is the code for the counter in up-and-down mode example:
+
+uint16_t pwm_seq[4] = {PWM_CH0_DUTY, PWM_CH1_DUTY, PWM_CH2_DUTY, PWM_CH3_DUTY};
+NRF_PWM0->PSEL.OUT[0] = (first_pin << PWM_PSEL_OUT_PIN_Pos) | 
+                        (PWM_PSEL_OUT_CONNECT_Connected <<
+                                                 PWM_PSEL_OUT_CONNECT_Pos);
+NRF_PWM0->PSEL.OUT[1] = (second_pin << PWM_PSEL_OUT_PIN_Pos) | 
+                        (PWM_PSEL_OUT_CONNECT_Connected <<
+                                                 PWM_PSEL_OUT_CONNECT_Pos);
+NRF_PWM0->ENABLE      = (PWM_ENABLE_ENABLE_Enabled << PWM_ENABLE_ENABLE_Pos);
+NRF_PWM0->MODE        = (PWM_MODE_UPDOWN_UpAndDown << PWM_MODE_UPDOWN_Pos);
+NRF_PWM0->PRESCALER   = (PWM_PRESCALER_PRESCALER_DIV_1 <<
+                                                 PWM_PRESCALER_PRESCALER_Pos);
+NRF_PWM0->COUNTERTOP  = (16000 << PWM_COUNTERTOP_COUNTERTOP_Pos); //1 msec
+NRF_PWM0->LOOP        = (PWM_LOOP_CNT_Disabled << PWM_LOOP_CNT_Pos);
+NRF_PWM0->DECODER   = (PWM_DECODER_LOAD_Individual << PWM_DECODER_LOAD_Pos) | 
+                      (PWM_DECODER_MODE_RefreshCount << PWM_DECODER_MODE_Pos);
+NRF_PWM0->SEQ[0].PTR  = ((uint32_t)(pwm_seq) << PWM_SEQ_PTR_PTR_Pos);
+NRF_PWM0->SEQ[0].CNT  = ((sizeof(pwm_seq) / sizeof(uint16_t)) <<
+                                                 PWM_SEQ_CNT_CNT_Pos);
+NRF_PWM0->SEQ[0].REFRESH  = 0;
+NRF_PWM0->SEQ[0].ENDDELAY = 0;
+NRF_PWM0->TASKS_SEQSTART[0] = 1;
+   
+  
+When the counter is running in up-and-down mode, the following formula can be used to compute the PWM period and the step size:
+
+TPWM(Up And Down) = TPWM_CLK * 2 * COUNTERTOP
+
+Step width/Resolution: Tsteps = TPWM_CLK * 2
+
+Decoder with EasyDMA
+The decoder uses EasyDMA to take PWM parameters stored in RAM and update the internal compare registers of the wave counter, based on the mode of operation.
+
+PWM parameters are organized into a sequence containing at least one half word (16 bit). Its most significant bit[15] denotes the polarity of the OUT[n] while bit[14:0] is the 15-bit compare value.
+
+Bit number	31	30	29	28	27	26	25	24	23	22	21	20	19	18	17	16	15	14	13	12	11	10	9	8	7	6	5	4	3	2	1	0
+Id																	B	A	A	A	A	A	A	A	A	A	A	A	A	A	A	A
+Reset 0x00000000	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0	0
+Id	RW	Field	Value Id	Value	Description
+A	RW	
+COMPARE
+
+Duty cycle setting - value loaded to internal compare register
+
+B	RW	
+POLARITY
+
+Edge polarity of GPIO.
+
+RisingEdge
+
+0
+
+First edge within the PWM period is rising
+
+FallingEdge
+
+1
+
+First edge within the PWM period is falling
+
+The DECODER register controls how the RAM content is interpreted and loaded into the internal compare registers. The LOAD field controls if the RAM values are loaded to all compare channels, or to update a group or all channels with individual values. The following figure illustrates how parameters stored in RAM are organized and routed to various compare channels in different modes:
+
+Figure 4. Decoder memory access modes
+
+Decoder memory access modes
+
+A special mode of operation is available when DECODER.LOAD is set to WaveForm. In this mode, up to three PWM channels can be enabled - OUT[0] to OUT[2]. In RAM, four values are loaded at a time: the first, second and third location are used to load the values, and the fourth RAM location is used to load the COUNTERTOP register. This way one can have up to three PWM channels with a frequency base that changes on a per PWM period basis. This mode of operation is useful for arbitrary wave form generation in applications, such as LED lighting.
+
+The register SEQ[n].REFRESH=N (one per sequence n=0 or 1) will instruct a new RAM stored pulse width value on every (N+1)th PWM period. Setting the register to zero will result in a new duty cycle update every PWM period, as long as the minimum PWM period is observed.
+
+Note that registers SEQ[n].REFRESH and SEQ[n].ENDDELAY are ignored when DECODER.MODE=NextStep. The next value is loaded upon every received NEXTSTEP task.
+
+SEQ[n].PTR is the pointer used to fetch COMPARE values from RAM. If the SEQ[n].PTR is not pointing to a RAM region, an EasyDMA transfer may result in a HardFault or RAM corruption. See Memory for more information about the different memory regions. After the SEQ[n].PTR is set to the desired RAM location, the SEQ[n].CNT register must be set to number of 16-bit half words in the sequence. It is important to observe that the Grouped mode requires one half word per group, while the Single mode requires one half word per channel, thus increasing the RAM size occupation. If PWM generation is not running when the SEQSTART[n] task is triggered, the task will load the first value from RAM and then start the PWM generation. A SEQSTARTED[n] event is generated as soon as the EasyDMA has read the first PWM parameter from RAM and the wave counter has started executing it. When LOOP.CNT=0, sequence n=0 or 1 is played back once. After the last value in the sequence has been loaded and started executing, a SEQEND[n] event is generated. The PWM generation will then continue with the last loaded value. The following figure illustrates an example of such simple playback:
+
+Figure 5. Simple sequence example
+
+Simple sequence example
+
+Figure depicts the source code used for configuration and timing details in a sequence where only sequence 0 is used and only run once with a new PWM duty cycle for each period.
+
+    
+NRF_PWM0->PSEL.OUT[0] = (first_pin << PWM_PSEL_OUT_PIN_Pos) | 
+                        (PWM_PSEL_OUT_CONNECT_Connected <<
+                                                 PWM_PSEL_OUT_CONNECT_Pos);
+NRF_PWM0->ENABLE      = (PWM_ENABLE_ENABLE_Enabled << PWM_ENABLE_ENABLE_Pos);
+NRF_PWM0->MODE        = (PWM_MODE_UPDOWN_Up << PWM_MODE_UPDOWN_Pos);
+NRF_PWM0->PRESCALER   = (PWM_PRESCALER_PRESCALER_DIV_1 <<
+                                                 PWM_PRESCALER_PRESCALER_Pos);
+NRF_PWM0->COUNTERTOP  = (16000 << PWM_COUNTERTOP_COUNTERTOP_Pos); //1 msec
+NRF_PWM0->LOOP        = (PWM_LOOP_CNT_Disabled << PWM_LOOP_CNT_Pos);
+NRF_PWM0->DECODER   = (PWM_DECODER_LOAD_Common << PWM_DECODER_LOAD_Pos) | 
+                      (PWM_DECODER_MODE_RefreshCount << PWM_DECODER_MODE_Pos);
+NRF_PWM0->SEQ[0].PTR  = ((uint32_t)(seq0_ram) << PWM_SEQ_PTR_PTR_Pos);
+NRF_PWM0->SEQ[0].CNT  = ((sizeof(seq0_ram) / sizeof(uint16_t)) <<
+                                                 PWM_SEQ_CNT_CNT_Pos);
+NRF_PWM0->SEQ[0].REFRESH  = 0;
+NRF_PWM0->SEQ[0].ENDDELAY = 0;
+NRF_PWM0->TASKS_SEQSTART[0] = 1;
+    
+   
+To completely stop the PWM generation and force the associated pins to a defined state, a STOP task can be triggered at any time. A STOPPED event is generated when the PWM generation has stopped at the end of currently running PWM period, and the pins go into their idle state as defined in GPIO OUT register. PWM generation can then only be restarted through a SEQSTART[n] task. SEQSTART[n] will resume PWM generation after having loaded the first value from the RAM buffer defined in the SEQ[n].PTR register.
+
+The table below indicates when specific registers get sampled by the hardware. Care should be taken when updating these registers to avoid that values are applied earlier than expected.
+
+Table 1. When to safely update PWM registers
+Register	Taken into account by hardware	Recommended (safe) update
+SEQ[n].PTR	When sending the SEQSTART[n] task	After having received the SEQSTARTED[n] event
+SEQ[n].CNT	When sending the SEQSTART[n] task	After having received the SEQSTARTED[n] event
+SEQ[0].ENDDELAY	
+When sending the SEQSTART[0] task
+
+Every time a new value from sequence [0] has been loaded from RAM and gets applied to the Wave Counter (indicated by the PWMPERIODEND event)
+
+Before starting sequence [0] through a SEQSTART[0] task
+
+When no more value from sequence [0] gets loaded from RAM (indicated by the SEQEND[0] event)
+
+At any time during sequence [1] (which starts when the SEQSTARTED[1] event is generated)
+
+SEQ[1].ENDDELAY	
+When sending the SEQSTART[1] task
+
+Every time a new value from sequence [1] has been loaded from RAM and gets applied to the Wave Counter (indicated by the PWMPERIODEND event)
+
+Before starting sequence [1] through a SEQSTART[1] task
+
+When no more value from sequence [1] gets loaded from RAM (indicated by the SEQEND[1] event)
+
+At any time during sequence [0] (which starts when the SEQSTARTED[0] event is generated)
+
+SEQ[0].REFRESH	
+When sending the SEQSTART[0] task
+
+Every time a new value from sequence [0] has been loaded from RAM and gets applied to the Wave Counter (indicated by the PWMPERIODEND event)
+
+Before starting sequence [0] through a SEQSTART[0] task
+
+At any time during sequence [1] (which starts when the SEQSTARTED[1] event is generated)
+
+SEQ[1].REFRESH	
+When sending the SEQSTART[1] task
+
+Every time a new value from sequence [1] has been loaded from RAM and gets applied to the Wave Counter (indicated by the PWMPERIODEND event)
+
+Before starting sequence [1] through a SEQSTART[1] task
+
+At any time during sequence [0] (which starts when the SEQSTARTED[0] event is generated)
+
+COUNTERTOP	
+In DECODER.LOAD=WaveForm: this register is ignored.
+
+In all other LOAD modes: at the end of current PWM period (indicated by the PWMPERIODEND event)
+
+Before starting PWM generation through a SEQSTART[n] task
+
+After a STOP task has been triggered, and the STOPPED event has been received.
+
+MODE	Immediately	
+Before starting PWM generation through a SEQSTART[n] task
+
+After a STOP task has been triggered, and the STOPPED event has been received.
+
+DECODER	Immediately	
+Before starting PWM generation through a SEQSTART[n] task
+
+After a STOP task has been triggered, and the STOPPED event has been received.
+
+PRESCALER	Immediately	
+Before starting PWM generation through a SEQSTART[n] task
+
+After a STOP task has been triggered, and the STOPPED event has been received.
+
+LOOP	Immediately	
+Before starting PWM generation through a SEQSTART[n] task
+
+After a STOP task has been triggered, and the STOPPED event has been received.
+
+PSEL.OUT[n]	Immediately	Before enabling the PWM instance through the ENABLE register
+Note: SEQ[n].REFRESH and SEQ[n].ENDDELAY are ignored at the end of a complex sequence, indicated by a LOOPSDONE event. The reason for this is that the last value loaded from RAM is maintained until further action from software (restarting a new sequence, or stopping PWM generation).
+A more complex example, where LOOP.CNT>0, is shown in the following figure:
+
+Figure 6. Example using two sequences
+
+Example using two sequences
+
+In this case, an automated playback takes place, consisting of SEQ[0], delay 0, SEQ[1], delay 1, then again SEQ[0], etc. The user can choose to start a complex playback with SEQ[0] or SEQ[1] through sending the SEQSTART[0] or SEQSTART[1] task. The complex playback always ends with delay 1.
+
+The two sequences 0 and 1 are defined by the addresses of value tables in RAM (pointed to by SEQ[n].PTR) and the buffer size (SEQ[n].CNT). The rate at which a new value is loaded is defined individually for each sequence by SEQ[n].REFRESH. The chaining of sequence 1 following the sequence 0 is implicit, the LOOP.CNT register allows the chaining of sequence 1 to sequence 0 for a determined number of times. In other words, it allows to repeat a complex sequence a number of times in a fully automated way.
+
+In the following code example, sequence 0 is defined with SEQ[0].REFRESH set to 1, meaning that a new PWM duty cycle is pushed every second PWM period. This complex sequence is started with the SEQSTART[0] task, so SEQ[0] is played first. Since SEQ[0].ENDDELAY=1 there will be one PWM period delay between last period on sequence 0 and the first period on sequence 1. Since SEQ[1].ENDDELAY=0 there is no delay 1, so SEQ[0] would be started immediately after the end of SEQ[1]. However, as LOOP.CNT is 1, the playback stops after having played SEQ[1] only once, and both SEQEND[1] and LOOPSDONE are generated (their order is not guaranteed in this case).
+
+    
+NRF_PWM0->PSEL.OUT[0] = (first_pin << PWM_PSEL_OUT_PIN_Pos) | 
+                        (PWM_PSEL_OUT_CONNECT_Connected <<
+                                                 PWM_PSEL_OUT_CONNECT_Pos);
+NRF_PWM0->ENABLE      = (PWM_ENABLE_ENABLE_Enabled << PWM_ENABLE_ENABLE_Pos);
+NRF_PWM0->MODE        = (PWM_MODE_UPDOWN_Up << PWM_MODE_UPDOWN_Pos);
+NRF_PWM0->PRESCALER   = (PWM_PRESCALER_PRESCALER_DIV_1 <<
+                                                 PWM_PRESCALER_PRESCALER_Pos);
+NRF_PWM0->COUNTERTOP  = (16000 << PWM_COUNTERTOP_COUNTERTOP_Pos); //1 msec
+NRF_PWM0->LOOP        = (1 << PWM_LOOP_CNT_Pos);
+NRF_PWM0->DECODER   = (PWM_DECODER_LOAD_Common << PWM_DECODER_LOAD_Pos) | 
+                      (PWM_DECODER_MODE_RefreshCount << PWM_DECODER_MODE_Pos);
+NRF_PWM0->SEQ[0].PTR  = ((uint32_t)(seq0_ram) << PWM_SEQ_PTR_PTR_Pos);
+NRF_PWM0->SEQ[0].CNT  = ((sizeof(seq0_ram) / sizeof(uint16_t)) <<
+                                                 PWM_SEQ_CNT_CNT_Pos);
+NRF_PWM0->SEQ[0].REFRESH  = 1;
+NRF_PWM0->SEQ[0].ENDDELAY = 1;
+NRF_PWM0->SEQ[1].PTR  = ((uint32_t)(seq1_ram) << PWM_SEQ_PTR_PTR_Pos);
+NRF_PWM0->SEQ[1].CNT  = ((sizeof(seq1_ram) / sizeof(uint16_t)) <<
+                                                 PWM_SEQ_CNT_CNT_Pos);
+NRF_PWM0->SEQ[1].REFRESH  = 0;
+NRF_PWM0->SEQ[1].ENDDELAY = 0;
+NRF_PWM0->TASKS_SEQSTART[0] = 1;
+    
+   
+The decoder can also be configured to asynchronously load new PWM duty cycle. If the DECODER.MODE register is set to NextStep, then the NEXTSTEP task will cause an update of internal compare registers on the next PWM period.
+
+The following figures provide an overview of each part of an arbitrary sequence, in various modes (LOOP.CNT=0 and LOOP.CNT>0). In particular, the following are represented:
+Initial and final duty cycle on the PWM output(s)
+Chaining of SEQ[0] and SEQ[1] if LOOP.CNT>0
+Influence of registers on the sequence
+Events generated during a sequence
+DMA activity (loading of next value and applying it to the output(s))
+Figure 7. Single shot (LOOP.CNT=0)
+
+TASKS_SEQSTART[0]
+EVENTS_SEQSTARTED[0]
+SEQ[0].ENDDELAY
+SEQ[0].CNT
+100% duty cycle
+New value load
+Previously loaded duty cycle
+EVENTS_SEQEND[0]
+0% duty cycle
+last loaded duty cycle maintained
+
+Note: The single-shot example also applies to SEQ[1]. Only SEQ[0] is represented for simplicity.
+Figure 8. Complex sequence (LOOP.CNT>0) starting with SEQ[0]
+
+Complex sequence (LOOP.CNT>0) starting with SEQ[0]
+
+Figure 9. Complex sequence (LOOP.CNT>0) starting with SEQ[1]
+
+Complex sequence (LOOP.CNT>0) starting with SEQ[1]
+
+Note: If a sequence is in use in a simple or complex sequence, it must have a length of SEQ[n].CNT > 0.
+Limitations
+Previous compare value is repeated if the PWM period is shorter than the time it takes for the EasyDMA to retrieve from RAM and update the internal compare registers. This is to ensure a glitch-free operation even for very short PWM periods.
+
+Pin configuration
+The OUT[n] (n=0..3) signals associated with each PWM channel are mapped to physical pins according to the configuration of PSEL.OUT[n] registers. If PSEL.OUT[n].CONNECT is set to Disconnected, the associated PWM module signal will not be connected to any physical pins.
+
+The PSEL.OUT[n] registers and their configurations are used as long as the PWM module is enabled and the PWM generation active (wave counter started). They are retained only as long as the device is in System ON mode (see section POWER for more information about power modes).
+
+To ensure correct behavior in the PWM module, the pins that are used must be configured in the GPIO peripheral in the following way before the PWM module is enabled:
+
+Table 2. Recommended GPIO configuration before starting PWM generation
+PWM signal	PWM pin	Direction	Output value	Comment
+OUT[n]	As specified in PSEL.OUT[n] (n=0..3)	Output	0	Idle state defined in GPIO OUT register
+The idle state of a pin is defined by the OUT register in the GPIO module, to ensure that the pins used by the PWM module are driven correctly. If PWM generation is stopped by triggering a STOP task, the PWM module itself is temporarily disabled or the device temporarily enters System OFF. This configuration must be retained in the GPIO for the selected pins (I/Os) for as long as the PWM module is supposed to be connected to an external PWM circuit.
+
+Only one peripheral can be assigned to drive a particular GPIO pin at a time. Failing to do so may result in unpredictable behavior.
+
+Registers
+Instances
+Instance	Base address	Description
+PWM0	0x4001C000	
+Pulse width modulation unit 0
+
+PWM1	0x40021000	
+Pulse width modulation unit 1
+
+PWM2	0x40022000	
+Pulse width modulation unit 2
+
+PWM3	0x4002D000	
+Pulse width modulation unit 3
+
+Register overview
+Register	Offset	Description
+TASKS_STOP	0x004	
+Stops PWM pulse generation on all channels at the end of current PWM period, and stops sequence playback
+
+TASKS_SEQSTART[0]	0x008	
+Loads the first PWM value on all enabled channels from sequence 0, and starts playing that sequence at the rate defined in SEQ[0]REFRESH and/or DECODER.MODE. Causes PWM generation to start if not running.
+
+TASKS_SEQSTART[1]	0x00C	
+Loads the first PWM value on all enabled channels from sequence 1, and starts playing that sequence at the rate defined in SEQ[1]REFRESH and/or DECODER.MODE. Causes PWM generation to start if not running.
+
+TASKS_NEXTSTEP	0x010	
+Steps by one value in the current sequence on all enabled channels if DECODER.MODE=NextStep. Does not cause PWM generation to start if not running.
+
+EVENTS_STOPPED	0x104	
+Response to STOP task, emitted when PWM pulses are no longer generated
+
+EVENTS_SEQSTARTED[0]	0x108	
+First PWM period started on sequence 0
+
+EVENTS_SEQSTARTED[1]	0x10C	
+First PWM period started on sequence 1
+
+EVENTS_SEQEND[0]	0x110	
+Emitted at end of every sequence 0, when last value from RAM has been applied to wave counter
+
+EVENTS_SEQEND[1]	0x114	
+Emitted at end of every sequence 1, when last value from RAM has been applied to wave counter
+
+EVENTS_PWMPERIODEND	0x118	
+Emitted at the end of each PWM period
+
+EVENTS_LOOPSDONE	0x11C	
+Concatenated sequences have been played the amount of times defined in LOOP.CNT
+
+SHORTS	0x200	
+Shortcuts between local events and tasks
+
+INTEN	0x300	
+Enable or disable interrupt
+
+INTENSET	0x304	
+Enable interrupt
+
+INTENCLR	0x308	
+Disable interrupt
+
+ENABLE	0x500	
+PWM module enable register
+
+MODE	0x504	
+Selects operating mode of the wave counter
+
+COUNTERTOP	0x508	
+Value up to which the pulse generator counter counts
+
+PRESCALER	0x50C	
+Configuration for PWM_CLK
+
+DECODER	0x510	
+Configuration of the decoder
+
+LOOP	0x514	
+Number of playbacks of a loop
+
+SEQ[0].PTR	0x520	
+Beginning address in RAM of this sequence
+
+SEQ[0].CNT	0x524	
+Number of values (duty cycles) in this sequence
+
+SEQ[0].REFRESH	0x528	
+Number of additional PWM periods between samples loaded into compare register
+
+SEQ[0].ENDDELAY	0x52C	
+Time added after the sequence
+
+SEQ[1].PTR	0x540	
+Beginning address in RAM of this sequence
+
+SEQ[1].CNT	0x544	
+Number of values (duty cycles) in this sequence
+
+SEQ[1].REFRESH	0x548	
+Number of additional PWM periods between samples loaded into compare register
+
+SEQ[1].ENDDELAY	0x54C	
+Time added after the sequence
+
+PSEL.OUT[0]	0x560	
+Output pin select for PWM channel 0
+
+PSEL.OUT[1]	0x564	
+Output pin select for PWM channel 1
+
+PSEL.OUT[2]	0x568	
+Output pin select for PWM channel 2
+
+PSEL.OUT[3]	0x56C	
+Output pin select for PWM channel 3
+
+TASKS_STOP

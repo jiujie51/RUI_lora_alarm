@@ -1,17 +1,20 @@
 #include <stdint.h>
 /*
  * 蜂鸣器驱动 — RUI3 tone()/noTone() 版本
- * 替代 nrfx_pwm (RUI3 SDK 未启用 NRFX_PWM0)
  *
  * NPN 8050 驱动: tone() 产生 3kHz 方波 → Q1 导通 → 蜂鸣器响
  * 音量控制: tone() 固定 50% 占空比, volume 仅做 on/off 开关
+ *
+ * 注: 本文件使用 tone()/noTone() 而非 nrfx_timer TIMER4,
+ *     避免与 NeoPixel (PWM0+DMA) 产生硬件资源冲突.
  *
  * 参考: ncs_lora_alarm/drv/buzzer_pwm.c (NRF_PWM0 ch0, P0.09, 3kHz)
  */
 #include <Arduino.h>
 #include "buzzer_pwm.h"
 #include "../boards/hub/board.h"
-#include "nrf_log.h"
+
+extern "C" int SEGGER_RTT_printf(unsigned, const char*, ...);
 
 /* ── 蜂鸣器自检 ──
  * 1 = init 后蜂鸣 3 声短促滴, 确认硬件正常
@@ -42,12 +45,12 @@ int buzzer_pwm_init(void) {
 	pinMode(BUZZER_PIN, OUTPUT);
 	noTone(BUZZER_PIN);
 
-	NRF_LOG_INFO("Buzzer initialized (pin P0_%d, %dHz, tone API)",
+	SEGGER_RTT_printf(0, "[INFO] Buzzer initialized (tone API, pin P0_%d, %dHz)\r\n",
 		BUZZER_PIN, BUZZER_FREQ_HZ);
 
 #if BUZZER_SELF_TEST
 	/* 自检: 3 声短促滴 (100ms on / 200ms off) */
-	NRF_LOG_INFO("Buzzer self-test: 3 beeps");
+	SEGGER_RTT_printf(0, "[INFO] Buzzer self-test: 3 beeps\r\n");
 	for (int i = 0; i < 3; i++) {
 		tone(BUZZER_PIN, BUZZER_FREQ_HZ);
 		delay(100);
@@ -106,7 +109,7 @@ void buzzer_pwm_tick(void) {
 
 	/* 自动停止 */
 	if (elapsed_sec >= auto_stop_sec) {
-		NRF_LOG_INFO("Buzzer auto-stop after %ds", auto_stop_sec);
+		SEGGER_RTT_printf(0, "[INFO] Buzzer auto-stop after %ds\r\n", auto_stop_sec);
 		buzzer_pwm_off();
 		return;
 	}

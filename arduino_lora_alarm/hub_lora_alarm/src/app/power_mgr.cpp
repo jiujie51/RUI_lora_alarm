@@ -12,7 +12,7 @@
 #include <Arduino.h>
 #include "power_mgr.h"
 #include "../boards/hub/board.h"
-#include "nrf_log.h"
+extern "C" int SEGGER_RTT_printf(unsigned, const char*, ...);
 
 
 static uint16_t battery_mv;
@@ -31,6 +31,7 @@ static uint16_t read_battery_mv(void) {
 	uint16_t adc_val = (uint16_t)(sum / 8);
 	/* ADC 14-bit (0-16383) → 电压 (0-3.6V) → 分压 ×2 → mV */
 	uint16_t mv = (uint32_t)adc_val * 3600 * 2 / 16383;
+	SEGGER_RTT_printf(0, "[PWR] ADC=%u (raw sum=%lu) → %umV\r\n", adc_val, sum, mv);
 	return mv;
 }
 
@@ -45,7 +46,7 @@ int power_mgr_init(void) {
 	analogReadResolution(14);
 	pinMode(BATTERY_ADC_PIN, INPUT);
 	power_mgr_update();
-	NRF_LOG_INFO("Power manager: %dmV (%d%%)", battery_mv, battery_pct);
+	SEGGER_RTT_printf(0, "[INFO] Power manager: %dmV (%d%%)\r\n", battery_mv, battery_pct);
 	return 0;
 }
 

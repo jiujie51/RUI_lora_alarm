@@ -2,7 +2,7 @@
  * @Author: jiefengzhu focus_feng@163.com
  * @Date: 2026-07-21 23:45:52
  * @LastEditors: jiefengzhu focus_feng@163.com
- * @LastEditTime: 2026-07-31 22:29:23
+ * @LastEditTime: 2026-08-07 22:31:22
  * @FilePath: \RUI_lora_alarm\arduino_lora_alarm\hub_lora_alarm\src\boards\hub\board.h
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
@@ -29,14 +29,16 @@
 #define DEVICE_ROOM_ID       12    /* 默认房间号 */
 #define DEVICE_HUB_TYPE      0     /* 0=RoomHub, 1=DoorHub, 2=HallwayHub */
 
-/* ── LoRaWAN OTAA 凭证 (Hub1 — 十二年级教室) ── */
-#define OTAA_DEVEUI  {0x20, 0x26, 0x06, 0x18, 0x01, 0x00, 0x00, 0x01}
-#define OTAA_APPEUI  {0xD3, 0xA1, 0x80, 0x5B, 0x54, 0xFA, 0x11, 0x85}
-#define OTAA_APPKEY  {0x50, 0xAD, 0x90, 0x7A, 0xF0, 0x5F, 0x8C, 0x5B,\
-     0x45, 0x0F, 0x82, 0x1D, 0x83, 0x21, 0x67, 0x88}
+/* ── LoRaWAN OTAA 凭证 (闪存无效时的 fallback 默认值, 生产请写入 flash 0xB4000) ── */
+#define OTAA_DEVEUI  {0x20, 0x26, 0x06, 0x18, 0x01, 0x00, 0x00, 0x09}
+#define OTAA_APPEUI  {0xEC, 0x69, 0x80, 0x73, 0x40, 0x5A, 0x57, 0xEC}
+#define OTAA_APPKEY  {0xB4, 0xA9, 0xB8, 0x64, 0x1D, 0xA5, 0x5E, 0x52, 0xD5, 0x1E, 0xC1, 0x06, 0x22, 0xFB, 0xA2, 0xCF}
 #define OTAA_BAND    RAK_REGION_US915
 
+#define IDENTITY_ENABLE  0     /* 从 flash 0xB4000 读取设备身份 */
+
 /* ── 功能开关 ── */
+#define LED_SELF_TEST        1     /* setup 阶段 LED/蜂鸣器硬件自检 */
 #define GPS_ENABLE           0     /* Hub 无 GPS */
 #define BLE_OBSERVER         0     /* Hub 是 Broadcaster, 不是 Scanner */
 #define OLED_ENABLE          0

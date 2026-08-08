@@ -51,9 +51,6 @@ static bool     device_enabled = true;
 static uint32_t ui_lcd_wake_ms;       /* OLED 最后唤醒时间 */
 #endif
 
-/* ── 入网状态跟踪 ── */
-static int last_join_state = -1;
-
 /* ── 按键→告警映射 ── */
 static const uint8_t btn_to_alarm[BTN_COUNT] = {
 	ALARM_TYPE_RED,    /* BTN_RED    = 0 */
@@ -309,31 +306,8 @@ static void on_button_event(uint8_t id, enum btn_event evt) {
 	}
 }
 
-#if OLED_ENABLE
-/* ── 入网状态 OLED 显示 ── */
-void badge_ui_show_join_status(int state) {
-	switch (state) {
-	case 0: /* 未入网 */
-	case 1: /* JOINING */
-		oled_show_two_lines("LoRa Alarm Badge", "LoRa Joining...");
-		break;
-	case 2: /* WAIT — 入网等待重试 */
-		oled_show_two_lines("LoRa Alarm Badge", "Retry LoRa...");
-		break;
-	case 3: /* JOINED */
-		oled_show_two_lines("LoRaWAN OK", NULL);
-		break;
-	case 4: /* FAILED */
-		oled_show_two_lines("LoRa Alarm Badge", "Join Failed!");
-		break;
-	default:
-		break;
-	}
-	ui_lcd_wake_ms = millis();
-}
-#else
+/* ── 入网状态 (不在 OLED 上显示) ── */
 void badge_ui_show_join_status(int state) { (void)state; }
-#endif
 
 /* ── 公共 API ── */
 int badge_ui_init(void) {
@@ -344,12 +318,6 @@ int badge_ui_init(void) {
 	SEGGER_RTT_printf(0, "[UI] callback set\n");
 	ui_confirm_reset();
 
-#if OLED_ENABLE
-	oled_wake();
-	badge_ui_show_join_status(0);
-#endif
-	last_join_state = app_hal_get_join_state();
-
 	SEGGER_RTT_printf(0, "[INFO] Badge UI initialized (two-step confirm + OLED)\n");
 	SEGGER_RTT_printf(0, "[UI] badge_ui_init done\n");
 	return 0;
@@ -358,16 +326,6 @@ int badge_ui_init(void) {
 void badge_ui_poll(void) {
 	button_sm_poll();
 	badge_ui_confirm_tick();
-
-	/* 入网状态变化 → 更新 OLED */
-#if OLED_ENABLE
-	int state = app_hal_get_join_state();
-	if (state != last_join_state) {
-		last_join_state = state;
-		oled_wake();
-		badge_ui_show_join_status(state);
-	}
-#endif
 
 	/* BLE 扫描完成后发送按键上行 */
 	if (pending_uplink_btn != 0xFF && !ble_scan_active()) {

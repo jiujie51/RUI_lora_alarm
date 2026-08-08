@@ -50,6 +50,8 @@ int SEGGER_RTT_printf(unsigned BufferIndex, const char * sFormat, ...);
 #include "src/app/app_hal.h"
 #include "src/proto/proto_internal.h"
 #include "src/config/config_store.h"
+#include "src/config/device_identity.h"
+#include "src/fuota/fuota_handler.h"
 #include "src/drv/led_strip.h"
 #include "src/drv/buzzer_pwm.h"
 #include "src/drv/gps_drv.h"
@@ -229,40 +231,51 @@ void setup() {
 	SEGGER_RTT_printf(0, "=== STEP 0: Boot (Badge) ===\n");
 	SEGGER_RTT_printf(0, "[INFO] === LoRa Alarm Badge v1.0 (RUI3) ===\n");
 
-	/* 0. 释放 NFC 引脚 (P0.09 蜂鸣器 / P0.10)
-	 *    nRF52840 默认启用 NFC, 必须手动禁用以作为 GPIO */
+	/* 0. FUOTA: 检查并执行待处理的固件升级
+	 *    必须在所有外设初始化之前 (成功时不返回) */
+	SEGGER_RTT_printf(0, "=== STEP 0a: FUOTA check ===\n");
+	fuota_apply_if_pending();
+	SEGGER_RTT_printf(0, "=== STEP 0a: No pending FUOTA ===\n");
+
+	/* 0b. 释放 NFC 引脚 (P0.09 蜂鸣器 / P0.10)
+	 *     nRF52840 默认启用 NFC, 必须手动禁用以作为 GPIO */
 	NRF_NFCT->TASKS_DISABLE = 1;
 	SEGGER_RTT_printf(0, "NFC disabled — P0.09/P0.10 now GPIO\n");
 
-	/* 1. BLE 协议栈初始化 (必须在 LoRaWAN 之前, 否则冲突重启) */
-	SEGGER_RTT_printf(0, "=== STEP 1: BLE init ===\n");
+	/* 1. 设备身份: BLE MAC + LoRaWAN 凭证 (flash 0xB4000, 生产时预烧录) */
+	SEGGER_RTT_printf(0, "=== STEP 1: device_identity_init ===\n");
+	device_identity_init();
+
+	/* 2. BLE 协议栈初始化 (必须在 LoRaWAN 之前, 否则冲突重启) */
+	SEGGER_RTT_printf(0, "=== STEP 2: BLE init ===\n");
 	ble_scan_init();
 
-	/* 2. LoRaWAN 初始化 */
-	SEGGER_RTT_printf(0, "=== STEP 2: LoRaWAN init (may reboot) ===\n");
+	/* 3. LoRaWAN 初始化 */
+	SEGGER_RTT_printf(0, "=== STEP 3: LoRaWAN init (may reboot) ===\n");
 	app_hal_lorawan_init();
 	app_hal_set_downlink_cb(on_lora_downlink);
-	SEGGER_RTT_printf(0, "=== STEP 2 done ===\n");
+	fuota_init();  /* 注册 FUOTA 进度/完成回调 */
+	SEGGER_RTT_printf(0, "=== STEP 3 done ===\n");
 
-	/* 2. 协议引擎 + 告警 + 执行器 */
-	SEGGER_RTT_printf(0, "=== STEP 2: proto/alarm/actuator init ===\n");
+	/* 4. 协议引擎 + 告警 + 执行器 */
+	SEGGER_RTT_printf(0, "=== STEP 4: proto/alarm/actuator init ===\n");
 	proto_engine_init();
-	/* 3. Flash 配置 (必须在 actuator_mgr_init 之前, alarm config 从 flash 恢复) */
-	SEGGER_RTT_printf(0, "=== STEP 3: config_store_init ===\n");
+	/* 5. Flash 配置 (必须在 actuator_mgr_init 之前, alarm config 从 flash 恢复) */
+	SEGGER_RTT_printf(0, "=== STEP 5: config_store_init ===\n");
 	config_store_init();
 
 	alarm_sm_init();
 	actuator_mgr_init();
 
-	/* 4. 电源管理 */
-	SEGGER_RTT_printf(0, "=== STEP 4: power_mgr_init ===\n");
+	/* 6. 电源管理 */
+	SEGGER_RTT_printf(0, "=== STEP 6: power_mgr_init ===\n");
 	power_mgr_init();
 
-	/* 5. 硬件驱动 */
-	SEGGER_RTT_printf(0, "=== STEP 5: led_strip_init ===\n");
+	/* 7. 硬件驱动 */
+	SEGGER_RTT_printf(0, "=== STEP 7: led_strip_init ===\n");
 	led_strip_init();
 	led_strip_set_all({0, 255, 0});//for test oled is init ok
-	SEGGER_RTT_printf(0, "=== STEP 6: buzzer_pwm_init ===\n");
+	SEGGER_RTT_printf(0, "=== STEP 8: buzzer_pwm_init ===\n");
 	buzzer_pwm_init();
 
 #if GPS_ENABLE

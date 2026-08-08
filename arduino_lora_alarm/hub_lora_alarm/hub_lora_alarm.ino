@@ -34,6 +34,8 @@ extern "C" {
 int SEGGER_RTT_printf(unsigned BufferIndex, const char * sFormat, ...);
 }
 
+#include "src/config/device_identity.h"
+#include "src/fuota/fuota_handler.h"
 #include "src/app/join_state.h"
 #include "src/app/alarm_sm.h"
 #include "src/app/actuator_mgr.h"
@@ -128,25 +130,19 @@ int loraThread(struct rt *rt) {
 		RT_SLEEP(rt, 1000);
 	}
 
-	SEGGER_RTT_printf(0, "[INFO]=== LoRaWAN Joined ===");
+	SEGGER_RTT_printf(0, "[INFO] === LoRaWAN Joined ===\r\n");
 
 	/* LoRaWAN 入网后 SoftDevice 可能挂起 BLE 广播, 重新拉起 */
-	SEGGER_RTT_printf(0, "BLE: re-start after LoRaWAN join\n");
+	SEGGER_RTT_printf(0, "BLE: re-start after LoRaWAN join\r\n");
 	ble_hub_adv_start();
 
-	/* 等待 Class B beacon lock (US915 信标周期 128s, 超时 130s) */
-	SEGGER_RTT_printf(0, "[INFO] Waiting for Class B beacon lock...\n");
-	// for (int i = 0; i < 130; i++) {
-	// 	if (app_hal_is_beacon_locked()) break;
-	// 	RT_SLEEP(rt, 1000);
-	// }
-	SEGGER_RTT_printf(0, "[INFO] Beacon lock: %d\n", app_hal_is_beacon_locked());
-
-	/* 配置 Class B 多播组 (4 组, 用于下行告警广播) */
-	SEGGER_RTT_printf(0, "Setting up multicast groups...\n");
-	app_hal_setup_multicast();
-
+	app_hal_lorawan_setup();
 	send_heartbeat();
+
+	/* 启动 Class B beacon 搜索 (非阻塞, 由主循环 app_hal_beacon_tick 驱动)
+	 * 上行消息(心跳/电量)不等待 beacon — 立即开始正常发送.
+	 * Beacon 搜索超时后自动回退 Class A, 并定期重试. */
+	app_hal_beacon_start();
 
 	/* 主循环: 消费 TX flag */
 	for (;;) {
@@ -161,6 +157,32 @@ int loraThread(struct rt *rt) {
 			power_mgr_update();
 			send_power_report();
 		}
+
+		/* 心跳日志 (10s) — 确认系统活跃, 驱动 Beacon 状态机 */
+		{
+			static uint32_t last_log = 0;
+			uint32_t now = millis();
+			if (now - last_log > 10000) {
+				last_log = now;
+				app_hal_beacon_tick();
+				app_hal_dump_classb_status();
+				SEGGER_RTT_printf(0, "[ALIVE] joined=%d alarm=%d batt=%d%%\r\n",
+					app_hal_is_joined(),
+					alarm_sm_current_priority(),
+					power_mgr_get_battery_pct());
+
+				/* BLE 看门狗: 每 30s 重新拉起广播 */
+				{
+					static uint32_t last_ble_wd = 0;
+					if (now - last_ble_wd > 30000) {
+						last_ble_wd = now;
+						SEGGER_RTT_printf(0, "[BLE] watchdog refresh\r\n");
+						ble_hub_adv_start();
+					}
+				}
+			}
+		}
+
 		RT_SLEEP(rt, 100);
 	}
 
@@ -183,6 +205,7 @@ int actuatorThread(struct rt *rt) {
  * setup()
  * ══════════════════════════════════════════════════════════ */
 void setup() {
+	delay(2000);
 	/*
 	 * 初始化顺序很重要:
 	 * 1. NFC 必须先禁用, 否则 P0.09 (蜂鸣器) 不可用
@@ -194,15 +217,26 @@ void setup() {
 	 */
 	SEGGER_RTT_printf(0, "=== STEP 0: Boot ===\n");
 
-	/* 0. 释放 NFC 引脚 (P0.09 蜂鸣器 / P0.10)
-	 *    nRF52840 默认启用 NFC, 必须手动禁用以作为 GPIO */
+	/* 0a. FUOTA: 检查并执行待处理的固件升级
+	 *     必须在所有外设初始化之前 (成功时不返回) */
+	SEGGER_RTT_printf(0, "=== STEP 0a: FUOTA check ===\n");
+	fuota_apply_if_pending();
+	SEGGER_RTT_printf(0, "=== STEP 0a: No pending FUOTA ===\n");
+
+	/* 0b. 释放 NFC 引脚 (P0.09 蜂鸣器 / P0.10)
+	 *     nRF52840 默认启用 NFC, 必须手动禁用以作为 GPIO */
 	NRF_NFCT->TASKS_DISABLE = 1;
 	SEGGER_RTT_printf(0, "NFC disabled — P0.09/P0.10 now GPIO\n");
+
+	/* 0c. 设备身份: BLE MAC + LoRaWAN 凭证 (flash 0xB4000, 生产时预烧录) */
+	SEGGER_RTT_printf(0, "=== STEP 0c: device_identity_init ===\n");
+	device_identity_init();
 
 	/* 1. LoRaWAN 初始化 (首次启动会 reboot) */
 	SEGGER_RTT_printf(0, "=== STEP 1: LoRaWAN init (may reboot) ===\n");
 	app_hal_lorawan_init();
 	app_hal_set_downlink_cb(on_lora_downlink);
+	fuota_init();  /* 注册 FUOTA 回调 */
 	SEGGER_RTT_printf(0, "=== STEP 1 done (no reboot) ===\n");
 
 	/* 2. 协议引擎 */
@@ -236,6 +270,14 @@ void setup() {
 	SEGGER_RTT_printf(0, "=== STEP 7: ble_hub_adv_start ===\n");
 	ble_hub_adv_start();
 
+	/* 7a. 首次上电: 将 BLE MAC (SoftDevice Random Static) 持久化到 identity flash
+	 *     仅在 flash 中无有效 identity 时写入, 已有则跳过 */
+	SEGGER_RTT_printf(0, "=== STEP 7a: device_identity_persist ===\n");
+	{
+		int ret = device_identity_persist();
+		SEGGER_RTT_printf(0, "[SETUP] device_identity_persist() = %d\r\n", ret);
+	}
+
 	/* 8. 定时器 */
 	SEGGER_RTT_printf(0, "=== STEP 8: Timers ===\n");
 	api.system.timer.create(RAK_TIMER_0, heartbeat_timer_cb, RAK_TIMER_PERIODIC);
@@ -257,15 +299,4 @@ void setup() {
 void loop() {
 	RT_SCHEDULE(loraThread(&rtLora));
 	RT_SCHEDULE(actuatorThread(&rtActuator));
-
-	/* 心跳日志 (10s) */
-	static unsigned long last_log = 0;
-	unsigned long now = millis();
-	if (now - last_log > 10000) {
-		last_log = now;
-		SEGGER_RTT_printf(0, "[ALIVE] joined=%d alarm=%d batt=%d%%\n",
-			app_hal_is_joined(),
-			alarm_sm_current_priority(),
-			power_mgr_get_battery_pct());
-	}
 }

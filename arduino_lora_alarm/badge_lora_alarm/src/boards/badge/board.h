@@ -18,7 +18,7 @@
 #define DEVICE_GROUP_ID      0     /* 默认无角色, 由 CMD 0x50 远程设置 */
 #define DEVICE_ROOM_ID       0     /* 默认房间号 */
 
-/* ── LoRaWAN OTAA 凭证 (Badge1 — Daniel) ── */
+/* ── LoRaWAN OTAA 凭证 (闪存无效时的 fallback 默认值, 生产请写入 flash 0xB4000) ── */
 #define OTAA_DEVEUI  {0x20, 0x26, 0x06, 0x18, 0x00, 0x00, 0x00, 0x01}
 #define OTAA_APPEUI  {0xB6, 0xAC, 0x3C, 0x87, 0x00, 0x67, 0x7D, 0xD6}
 #define OTAA_APPKEY  {0xAF, 0x96, 0x09, 0x5F, 0x98, 0x89, 0xBE, 0x31,\
@@ -26,6 +26,7 @@
 #define OTAA_BAND    RAK_REGION_US915
 
 /* ── 功能开关 ── */
+#define IDENTITY_ENABLE      0     /* 从 flash 0xB4000 读取设备身份 */
 #define GPS_ENABLE           1
 #define BLE_OBSERVER         1     /* BLE 扫描 (定位 Hub) */
 #define OLED_ENABLE          1
