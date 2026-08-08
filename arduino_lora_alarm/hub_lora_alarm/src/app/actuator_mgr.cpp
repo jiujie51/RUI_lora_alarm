@@ -124,7 +124,12 @@ int actuator_mgr_sync(void) {
 	if (new_prio == ALARM_PRIO_NORMAL) {
 		apply_led(8); apply_buzzer(8);
 	} else {
-		apply_led(new_prio); apply_buzzer(new_prio);
+		apply_led(new_prio);
+		/* Hub: only Code Red (P0) and All Clear (P7) use buzzer */
+		if (new_prio == ALARM_PRIO_CODE_RED || new_prio == ALARM_PRIO_ALL_CLEAR)
+			apply_buzzer(new_prio);
+		else
+			buzzer_pwm_off();
 	}
 
 tick:

@@ -208,6 +208,13 @@ static void start_scan(uint32_t duration_ms) {
 
 int ble_scan_start_alert(void) {
 	alert_mode = true;
+	if (scanning) {
+		/* 已在扫描中 (alert/silent), 仅延长超时, 避免 SoftDevice stop→start 竞态 */
+		scan_start_ms    = millis();
+		scan_duration_ms = SCAN_ALERT_DURATION_MS;
+		SEGGER_RTT_printf(0, "[INFO] Alert scan extended (%ds)\n", SCAN_ALERT_DURATION_MS / 1000);
+		return 0;
+	}
 	start_scan(SCAN_ALERT_DURATION_MS);
 	SEGGER_RTT_printf(0, "[INFO] Alert scan started (%ds)\n", SCAN_ALERT_DURATION_MS / 1000);
 	return 0;

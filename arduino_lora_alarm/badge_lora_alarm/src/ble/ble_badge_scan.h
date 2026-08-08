@@ -1,7 +1,7 @@
 /*
  * BLE Badge 扫描 — Hub 广播发现 + RSSI 定位 (Badge 专属)
  *
- * Hub 广播格式 (ble_hub_adv.cpp):
+ * Hub 广播格式:
  *   [Complete Name: "ALARM_HUB"]
  *   [Manufacturer Data: MAC(6) + dev_type(1) + room_id(1)]
  *

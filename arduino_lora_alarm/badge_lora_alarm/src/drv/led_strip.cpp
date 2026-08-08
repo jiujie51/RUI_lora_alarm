@@ -31,6 +31,7 @@ static uint8_t        brightness     = 100;
 static bool           blink_on;
 static uint32_t       last_toggle_ms;
 static bool           hw_ready;
+static struct led_color last_applied = {0xFF, 0xFF, 0xFF}; /* 用于变化检测 */
 
 /* 亮度缩放: val 0-255 × brightness 0-100% → 0-255 */
 static inline uint8_t led_scale(uint8_t val) {
@@ -43,8 +44,16 @@ static void led_apply(struct led_color color) {
 	uint8_t r_val = led_scale(color.r);
 	uint8_t g_val = led_scale(color.g);
 	uint8_t b_val = led_scale(color.b);
-	SEGGER_RTT_printf(0, "[LED] analogWrite R=%d(P0_%d) G=%d(P1_%d) B=%d(P1_%d)\n",
-		r_val, LED_R_PIN, g_val, LED_G_PIN, b_val, LED_B_PIN);
+
+	/* 仅在值变化时打印日志, 避免 blink tick 刷屏 */
+	if (r_val != last_applied.r || g_val != last_applied.g || b_val != last_applied.b) {
+		SEGGER_RTT_printf(0, "[LED] analogWrite R=%d(P0_%d) G=%d(P1_%d) B=%d(P1_%d)\n",
+			r_val, LED_R_PIN, g_val, LED_G_PIN, b_val, LED_B_PIN);
+		last_applied.r = r_val;
+		last_applied.g = g_val;
+		last_applied.b = b_val;
+	}
+
 	analogWrite(LED_R_PIN, r_val);
 	analogWrite(LED_G_PIN, g_val);
 	analogWrite(LED_B_PIN, b_val);

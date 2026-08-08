@@ -196,6 +196,7 @@ int oled_init(void) {
 	oled_write_cmd(0x30);
 	oled_write_cmd(0x8D); /* charge pump enable */
 	oled_write_cmd(0x14);
+	oled_clear();         /* 清除 GDDRAM, 避免上电随机数据显示 */
 	oled_write_cmd(0xAF); /* display on */
 
 	SEGGER_RTT_printf(0, "[OLED] Init done (HW TWI0, SSD1306 128x64)\n");

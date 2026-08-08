@@ -11,9 +11,7 @@
 #include "../app/actuator_mgr.h"
 #include "../drv/buzzer_pwm.h"
 #include "../config/config_store.h"
-#if OLED_ENABLE
-#include "../drv/oled_drv.h"
-#endif
+#include "../ui/badge_ui.h"
 
 extern "C" int SEGGER_RTT_printf(unsigned, const char*, ...);
 
@@ -35,6 +33,23 @@ uint8_t internal_button_to_proto(uint8_t btn) {
 	return (btn < 4) ? map[btn] : 0xFF;
 }
 
+/* ── 告警类型 → 组掩码过滤 (下行 CMD 0x03 组权限检查) ── */
+static bool alarm_type_allowed_for_group(uint8_t alarm_type, uint8_t dev_group) {
+	static const uint8_t mask[8] = {
+		[ALARM_TYPE_RED - 1]      = 0xFF,
+		[ALARM_TYPE_BLUE - 1]     = GROUP_ADMIN | GROUP_NURSE,
+		[ALARM_TYPE_YELLOW - 1]   = GROUP_ADMIN,
+		[ALARM_TYPE_GREEN - 1]    = 0xFF,
+		[ALARM_TYPE_HOLD - 1]     = 0xFF,
+		[ALARM_TYPE_SECURE - 1]   = 0xFF,
+		[ALARM_TYPE_EVACUATE - 1] = 0xFF,
+		[ALARM_TYPE_SHELTER - 1]  = 0xFF,
+	};
+	if (alarm_type < 1 || alarm_type > 8) return false;
+	if (mask[alarm_type - 1] == 0xFF) return true;
+	return (dev_group & mask[alarm_type - 1]) != 0;
+}
+
 static inline uint32_t read_u32_be(const uint8_t *p) {
 	return ((uint32_t)p[0] << 24) | ((uint32_t)p[1] << 16)
 	     | ((uint32_t)p[2] << 8)  |  p[3];
@@ -42,7 +57,11 @@ static inline uint32_t read_u32_be(const uint8_t *p) {
 
 /* ── 设备身份 ── */
 static uint8_t device_group_id = 0;
-static uint8_t device_room_id  = DEVICE_ROOM_ID;
+
+/* ── 初始化时从 config_store 恢复 ── */
+static void device_id_sync(void) {
+	device_group_id = config_get_group_id();
+}
 
 /* ── 多播匹配 ── */
 static bool match_multicast(uint8_t cmd_group, uint8_t cmd_room,
@@ -62,7 +81,7 @@ static int handle_code(const uint8_t *data, uint8_t len) {
 	uint8_t proto_alarm = data[1];
 	uint8_t cmd_room    = (len >= 3) ? data[2] : 0;
 
-	if (!match_multicast(cmd_group, cmd_room, device_group_id, device_room_id))
+	if (!match_multicast(cmd_group, cmd_room, device_group_id, config_get_room_id()))
 		return -13; /* -EACCES */
 
 	uint8_t alarm_type = proto_alarm_to_internal(proto_alarm);
@@ -71,11 +90,17 @@ static int handle_code(const uint8_t *data, uint8_t len) {
 		return -22;
 	}
 
+	if (!alarm_type_allowed_for_group(alarm_type, device_group_id)) {
+		SEGGER_RTT_printf(0, "[WARN] CMD 0x03: alarm type %d denied for group 0x%02X\n",
+			alarm_type, device_group_id);
+		return -13; /* -EACCES */
+	}
+
 	SEGGER_RTT_printf(0, "[INFO] CMD 0x03 Code: group=0x%02X alarm=%d -> internal=%d\n",
 		cmd_group, proto_alarm, alarm_type);
 
 	int ret = alarm_sm_set(alarm_type, ALARM_SRC_LORAWAN);
-	if (ret == 0) actuator_mgr_sync();
+	if (ret == 0) { actuator_mgr_sync(); badge_ui_show_alarm(); }
 	return ret;
 }
 
@@ -94,7 +119,7 @@ static int handle_code_setting(const uint8_t *data, uint8_t len) {
 	uint8_t led_g       = data[22];
 	uint8_t led_b       = data[23];
 
-	if (!match_multicast(cmd_group, 0, device_group_id, device_room_id))
+	if (!match_multicast(cmd_group, 0, device_group_id, config_get_room_id()))
 		return -13;
 
 	uint8_t alarm_type = proto_alarm_to_internal(proto_alarm);
@@ -143,7 +168,7 @@ static int handle_led_control(const uint8_t *data, uint8_t len) {
 	uint8_t led_g     = data[13];
 	uint8_t led_b     = data[14];
 
-	if (!match_multicast(cmd_group, 0, device_group_id, device_room_id)) return -13;
+	if (!match_multicast(cmd_group, 0, device_group_id, config_get_room_id())) return -13;
 
 	uint8_t mode;
 	uint16_t on_ms = 0, off_ms = 0;
@@ -168,7 +193,7 @@ static int handle_buzzer_control(const uint8_t *data, uint8_t len) {
 	uint32_t buzz_off = read_u32_be(&data[7]);
 	uint8_t volume    = data[11];
 
-	if (!match_multicast(cmd_group, 0, device_group_id, device_room_id)) return -13;
+	if (!match_multicast(cmd_group, 0, device_group_id, config_get_room_id())) return -13;
 
 	uint8_t mode; uint16_t on_ms = 0, off_ms = 0;
 	if (mode_sw & 0x01) {
@@ -194,7 +219,7 @@ static int handle_vibration_control(const uint8_t *data, uint8_t len) {
 	uint32_t vib_on      = read_u32_be(&data[4]);
 	uint32_t vib_off     = read_u32_be(&data[8]);
 
-	if (!match_multicast(cmd_group, 0, device_group_id, device_room_id)) return -13;
+	if (!match_multicast(cmd_group, 0, device_group_id, config_get_room_id())) return -13;
 
 	if (mode_sw & 0x01) {
 		/* 间歇模式: 震动 on/off 循环 */
@@ -209,68 +234,37 @@ static int handle_vibration_control(const uint8_t *data, uint8_t len) {
 }
 
 /* ── CMD 0x08: LCD Content ──
- * 格式: group(1) + line1_len(1) + line1(line1_len) + line2_len(1) + line2(line2_len)
- * OLED: 128x64, 8x16 字体, 每行 16 字符 */
+ * 协议格式: group(1) + line1[20] + line2[20] = 41 bytes (OLED 16 chars/line) */
 static int handle_lcd_content(const uint8_t *data, uint8_t len) {
-	if (len < 3) { SEGGER_RTT_printf(0, "[WARN] CMD 0x08: need >=3 bytes\n"); return -22; }
+	if (len < 41) { SEGGER_RTT_printf(0, "[WARN] CMD 0x08: need 41 bytes, got %d\n", len); return -22; }
 
 	uint8_t cmd_group = data[0];
-	if (!match_multicast(cmd_group, 0, device_group_id, device_room_id))
+	if (!match_multicast(cmd_group, 0, device_group_id, config_get_room_id()))
 		return -13;
 
-	uint8_t line1_len = data[1];
-	if (line1_len > 16) line1_len = 16;
-	uint8_t pos = 2;
-
-#if OLED_ENABLE
 	char line1[17] = {0};
-	if (line1_len > 0 && pos + line1_len <= len) {
-		memcpy(line1, &data[pos], line1_len);
-		pos += line1_len;
-	}
-
-	uint8_t line2_len = (pos < len) ? data[pos] : 0;
-	pos++;
 	char line2[17] = {0};
-	if (line2_len > 16) line2_len = 16;
-	if (line2_len > 0 && pos + line2_len <= len) {
-		memcpy(line2, &data[pos], line2_len);
-	}
+	memcpy(line1, &data[1],  20); line1[16] = '\0';  /* 截断到 16 字符 */
+	memcpy(line2, &data[21], 20); line2[16] = '\0';
 
-	oled_clear_line(0);
-	oled_draw_string(0, 0, line1);
-	oled_clear_line(2);
-	if (line2_len > 0) oled_draw_string(0, 2, line2);
-
+	badge_ui_set_lcd_content(line1, line2);
 	SEGGER_RTT_printf(0, "[INFO] CMD 0x08 LCD: L1=\"%s\" L2=\"%s\"\n", line1, line2);
-#else
-	SEGGER_RTT_printf(0, "[INFO] CMD 0x08 LCD: OLED disabled\n");
-#endif
 	return 0;
 }
 
 /* ── CMD 0x09: LCD Line2 On/Off ──
- * 格式: group(1) + enable(1) */
+ * 协议格式: group(1) + enable(1), enable=0 隐藏 line2, enable=1 显示 line2 */
 static int handle_lcd_line2_onoff(const uint8_t *data, uint8_t len) {
 	if (len < 2) { SEGGER_RTT_printf(0, "[WARN] CMD 0x09: need 2 bytes\n"); return -22; }
 
 	uint8_t cmd_group = data[0];
 	uint8_t enable    = data[1];
 
-	if (!match_multicast(cmd_group, 0, device_group_id, device_room_id))
+	if (!match_multicast(cmd_group, 0, device_group_id, config_get_room_id()))
 		return -13;
 
-#if OLED_ENABLE
-	if (enable) {
-		oled_display_on();
-	} else {
-		/* 仅关 line2 (清空 page 2-3), line1 保持 */
-		oled_clear_line(2);
-	}
+	badge_ui_set_lcd_line2_visible(enable != 0);
 	SEGGER_RTT_printf(0, "[INFO] CMD 0x09 LCD Line2: %s\n", enable ? "ON" : "OFF");
-#else
-	SEGGER_RTT_printf(0, "[INFO] CMD 0x09 LCD Line2: OLED disabled\n");
-#endif
 	return 0;
 }
 
@@ -282,20 +276,37 @@ static int handle_clear_packet(const uint8_t *data, uint8_t len) {
 	uint8_t clear_type = data[1];
 	uint8_t cmd_room   = (len >= 3) ? data[2] : 0;
 
-	if (!match_multicast(cmd_group, cmd_room, device_group_id, device_room_id))
+	if (!match_multicast(cmd_group, cmd_room, device_group_id, config_get_room_id()))
 		return -13;
 
 	if (clear_type == 0) {
-		SEGGER_RTT_printf(0, "[INFO] CMD 0x0A: Clear All\n");
+		/* "Clear All Statuses": 全清 + 执行器全关 + OLED 清屏 */
+		SEGGER_RTT_printf(0, "[INFO] CMD 0x0A: Clear All Statuses\n");
 		alarm_sm_clear_all();
+		actuator_all_off();
+		badge_ui_clear_display();
 	} else if (clear_type == 1) {
+		/* "Set All Clear Status": 仅移除 Code Red */
 		SEGGER_RTT_printf(0, "[INFO] CMD 0x0A: All Clear (Code Red only)\n");
 		alarm_sm_all_clear();
+		actuator_mgr_sync();
+		badge_ui_show_alarm();
 	} else {
 		return -22;
 	}
 
-	actuator_mgr_sync();
+	return 0;
+}
+
+/* ── CMD 0x0B: Set Room ID ── */
+static int handle_set_room_id(const uint8_t *data, uint8_t len) {
+	if (len < 1) { SEGGER_RTT_printf(0, "[WARN] CMD 0x0B: need >=1 byte\n"); return -22; }
+
+	uint8_t new_room = data[0];
+	SEGGER_RTT_printf(0, "[INFO] CMD 0x0B: Set Room ID: %d -> %d\n",
+		config_get_room_id(), new_room);
+
+	config_set_room_id(new_room);
 	return 0;
 }
 
@@ -317,6 +328,10 @@ cmd_handler_t cmd_handlers[256];
 
 void proto_handler_init(void) {
 	memset(cmd_handlers, 0, sizeof(cmd_handlers));
+
+	/* 从 flash 恢复 group_id (room_id 直接读 config, 无需缓存) */
+	device_id_sync();
+
 	cmd_handlers[CMDID_CODE]               = handle_code;
 	cmd_handlers[CMDID_CODE_SETTING]       = handle_code_setting;
 	cmd_handlers[CMDID_LED_CONTROL]        = handle_led_control;
@@ -325,6 +340,7 @@ void proto_handler_init(void) {
 	cmd_handlers[CMDID_LCD_CONTENT]        = handle_lcd_content;
 	cmd_handlers[CMDID_LCD_LINE2_ONOFF]    = handle_lcd_line2_onoff;
 	cmd_handlers[CMDID_CLEAR_PACKET]       = handle_clear_packet;
+	cmd_handlers[CMDID_SET_ROOM_ID]        = handle_set_room_id;
 	cmd_handlers[CMDID_SET_GROUP_ID]       = handle_set_group_id;
 }
 
@@ -336,4 +352,4 @@ int proto_handle_frame(const struct proto_frame *frame) {
 }
 
 uint8_t proto_get_group_id(void) { return device_group_id; }
-uint8_t proto_get_room_id(void)  { return device_room_id; }
+uint8_t proto_get_room_id(void)  { return config_get_room_id(); }

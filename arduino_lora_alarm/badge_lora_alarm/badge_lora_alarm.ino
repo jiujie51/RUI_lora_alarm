@@ -70,7 +70,8 @@ int SEGGER_RTT_printf(unsigned BufferIndex, const char * sFormat, ...);
 #define HW_SELF_TEST  1
 
 /* ── 全局状态 ── */
-static volatile bool g_periodic_tx_pending = false;
+static volatile bool g_heartbeat_pending = false;
+static volatile bool g_power_report_pending = false;
 static uint8_t  last_power_pct = 255;
 
 #if OLED_ENABLE
@@ -91,46 +92,50 @@ static void on_lora_downlink(uint8_t port, const uint8_t *data, uint8_t len) {
 }
 
 /* ── 上行函数 ── */
-static void send_heartbeat(void) {
+static bool send_heartbeat(void) {
 	static uint8_t buf[64];
 	int len = proto_build_heartbeat(buf, sizeof(buf),
 		DEV_TYPE_BADGE, config_get_group_id());
 	if (len <= 0) {
 		SEGGER_RTT_printf(0, "[WARN] Heartbeat build failed\n");
-		return;
+		return false;
 	}
 	if (app_hal_send(FPORT_BADGE_UP, buf, len, false)) {
 		SEGGER_RTT_printf(0, "[INFO] Heartbeat sent (%d bytes)\n", len);
+		return true;
 	} else {
 		SEGGER_RTT_printf(0, "[WARN] Heartbeat send failed! joined=%d len=%d\n",
 			app_hal_is_joined(), len);
+		return false;
 	}
 }
 
-static void send_power_report(void) {
+static bool send_power_report(void) {
 	uint8_t pct = power_mgr_get_battery_pct();
-	if (abs((int)pct - (int)last_power_pct) < POWER_REPORT_DELTA_PCT) return;
+	if (abs((int)pct - (int)last_power_pct) < POWER_REPORT_DELTA_PCT) return false;
 
 	static uint8_t buf[64];
 	int len = proto_build_power(buf, sizeof(buf), DEV_TYPE_BADGE, pct);
 	if (len <= 0) {
 		SEGGER_RTT_printf(0, "[WARN] Power report build failed\n");
-		return;
+		return false;
 	}
 	if (app_hal_send(FPORT_COMMON, buf, len, false)) {
 		last_power_pct = pct;
 		SEGGER_RTT_printf(0, "[INFO] Power report: %d%%\n", pct);
+		return true;
 	} else {
 		SEGGER_RTT_printf(0, "[WARN] Power report send failed! joined=%d\n",
 			app_hal_is_joined());
+		return false;
 	}
 }
 
 /* ── 定时器回调 ── */
 static void periodic_timer_cb(void *) {
-	SEGGER_RTT_printf(0, "[TIMER] tick\n");
 	if (app_hal_is_joined()) {
-		g_periodic_tx_pending = true;
+		g_heartbeat_pending = true;
+		g_power_report_pending = true;
 	}
 }
 
@@ -165,17 +170,19 @@ int loraThread(struct rt *rt) {
 	for (;;) {
 		RT_YIELD(rt);
 
-		if (g_periodic_tx_pending) {
-			g_periodic_tx_pending = false;
-			SEGGER_RTT_printf(0, "[TX] heartbeat+power start\n");
-			send_heartbeat();
+		if (g_heartbeat_pending) {
+			if (send_heartbeat()) {
+				g_heartbeat_pending = false;
+			}
+		} else if (g_power_report_pending) {
 			power_mgr_update();
-			send_power_report();
-#if GPS_ENABLE
-			gps_drv_check_timeout();
-#endif
-			SEGGER_RTT_printf(0, "[TX] heartbeat+power done\n");
+			if (send_power_report()) {
+				g_power_report_pending = false;
+			}
 		}
+#if GPS_ENABLE
+		gps_drv_check_timeout();
+#endif
 
 		/* 心跳日志 (10s) — 确认系统活跃 */
 		{
@@ -257,12 +264,13 @@ void setup() {
 	fuota_init();  /* 注册 FUOTA 进度/完成回调 */
 	SEGGER_RTT_printf(0, "=== STEP 3 done ===\n");
 
-	/* 4. 协议引擎 + 告警 + 执行器 */
-	SEGGER_RTT_printf(0, "=== STEP 4: proto/alarm/actuator init ===\n");
-	proto_engine_init();
-	/* 5. Flash 配置 (必须在 actuator_mgr_init 之前, alarm config 从 flash 恢复) */
-	SEGGER_RTT_printf(0, "=== STEP 5: config_store_init ===\n");
+	/* 4. Flash 配置 (必须在 proto_engine_init/alarm_sm/actuator 之前) */
+	SEGGER_RTT_printf(0, "=== STEP 4: config_store_init ===\n");
 	config_store_init();
+
+	/* 5. 协议引擎 + 告警 + 执行器 */
+	SEGGER_RTT_printf(0, "=== STEP 5: proto/alarm/actuator init ===\n");
+	proto_engine_init();
 
 	alarm_sm_init();
 	actuator_mgr_init();

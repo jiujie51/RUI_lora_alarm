@@ -13,5 +13,9 @@
 int  badge_ui_init(void);
 void badge_ui_poll(void);
 void badge_ui_show_join_status(int state);
+void badge_ui_show_alarm(void);
+void badge_ui_set_lcd_content(const char *line1, const char *line2);
+void badge_ui_set_lcd_line2_visible(bool visible);
+void badge_ui_clear_display(void);
 
 #endif /* BADGE_UI_H */

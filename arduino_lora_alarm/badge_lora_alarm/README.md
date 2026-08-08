@@ -34,8 +34,7 @@ arduino_lora_alarm/
 ├── config/
 │   └── config_store.h/cpp      # Flash 配置存储
 ├── ble/
-│   ├── ble_hub_adv.h/cpp       # Hub BLE 广播
-│   └── ble_badge_scan.h/cpp    # Badge BLE 扫描 (待实现)
+│   └── ble_badge_scan.h/cpp    # Badge BLE 扫描
 ├── drv/
 │   ├── led_strip.h/cpp         # WS2812 灯带 (Hub)
 │   ├── led_pwm.h/cpp           # PWM LED (Badge, 待实现)

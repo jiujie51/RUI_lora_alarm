@@ -17,7 +17,7 @@ enum buzzer_mode { BUZZER_OFF = 0, BUZZER_ON, BUZZER_PATTERN };
 
 /* LED 颜色 */
 struct led_color {
-	uint8_t r, g, b;  /* WS2812: app 侧存 RGB, 驱动内部转 GRB */
+	uint8_t r, g, b;  /* WS2812: RGB, NeoPixel NEO_GRB 自动转换 */
 };
 
 /* 驱动配置条目 (per-priority) */

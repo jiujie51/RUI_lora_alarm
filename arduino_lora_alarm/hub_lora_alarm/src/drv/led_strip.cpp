@@ -51,9 +51,9 @@ int led_strip_init(void) {
 int led_strip_set_all(struct led_color color) {
 	for (int i = 0; i < LED_STRIP_NUM_LEDS; i++) {
 		strip.setPixelColor(i,
-			scale(color.g),   /* WS2812 GRB 序: g→index 0 */
-			scale(color.r),   /* r→index 1 */
-			scale(color.b));  /* b→index 2 */
+			scale(color.r),   /* NeoPixel NEO_GRB 自动处理字节序 */
+			scale(color.g),
+			scale(color.b));
 	}
 	/* no __disable_irq — SD assert risk */ 
 	strip.show();
@@ -79,7 +79,7 @@ int led_strip_set_mode(enum led_mode mode, struct led_color color,
 
 int led_strip_set_led(uint8_t index, struct led_color color) {
 	if (index >= LED_STRIP_NUM_LEDS) return -22;
-	strip.setPixelColor(index, scale(color.g), scale(color.r), scale(color.b));
+	strip.setPixelColor(index, scale(color.r), scale(color.g), scale(color.b));
 	return 0;
 }
 

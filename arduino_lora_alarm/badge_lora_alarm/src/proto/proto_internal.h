@@ -32,6 +32,7 @@
 #define CMDID_LCD_CONTENT    0x08
 #define CMDID_LCD_LINE2_ONOFF    0x09
 #define CMDID_CLEAR_PACKET   0x0A
+#define CMDID_SET_ROOM_ID    0x0B
 #define CMDID_SET_GROUP_ID   0x50
 
 /* ── Device type ── */

@@ -1,7 +1,8 @@
 /*
  * Device Identity Flash Storage — BLE MAC + LoRaWAN OTAA Credentials
  *
- * Flash address: user flash offset 0x4000 (absolute 0xB4000, independent 4KB sector)
+ * Flash address: user flash offset 0x4000 (absolute 0x74000, independent 4KB sector)
+ * RUI3 api.system.flash base = 0x70000, offset 0x4000 → absolute 0x70000 + 0x4000 = 0x74000
  * Layout: magic(4) + ble_mac(6) + dev_eui(8) + app_eui(8) + app_key(16) + crc32(4) = 46 bytes
  *
  * Production:

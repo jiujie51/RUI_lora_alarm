@@ -35,6 +35,7 @@ static lora_downlink_cb_t g_downlink_cb = NULL;
 static int join_state_val = JOIN_STATE_OFFLINE;
 static uint8_t join_attempt = 0;
 static uint32_t next_join_ms = 0;
+static volatile bool tx_busy = false;  /* true = MAC 正在处理 TX+RX, 禁止新发送 */
 
 /* ── Beacon 状态机 ── */
 static beacon_state_t bcn_state = BCN_IDLE;
@@ -116,6 +117,8 @@ static void ruiv3_join_cb(int32_t status) {
 
 /* ── RUI3 发送回调 ── */
 static void ruiv3_send_cb(int32_t status) {
+	tx_busy = false;  /* TX+RX 周期结束, 允许下一次发送 */
+
 	switch (status) {
 	case RAK_LORAMAC_STATUS_OK:
 		/* TX success — silent in normal operation */
@@ -379,20 +382,19 @@ void app_hal_dump_classb_status(void) {
 	}
 }
 
-/* ── 发送 (beacon lock 未就绪时阻塞上行) ── */
+/* ── 发送 (beacon lock 未就绪时阻塞上行, tx_busy 防 MAC 冲突) ── */
 bool app_hal_send(uint8_t fport, const uint8_t *data, uint8_t len, bool confirmed) {
 	if (!api.lorawan.njs.get()) {
 		SEGGER_RTT_printf(0, "[WARN] TX blocked: not joined\r\n");
 		return false;
 	}
-	// if (!rx_beacon()) {
-	// 	SEGGER_RTT_printf(0, "[WARN] TX blocked: no beacon (btime=0)\r\n");
-	// 	app_hal_dump_classb_status();
-	// 	return false;
-	// }
+	if (tx_busy) {
+		return false;  /* 上一个 TX+RX 周期未完成, 不调用 api.lorawan.send */
+	}
 
 	/* 非阻塞发送 — 不 delay 重试, 避免阻塞 actuatorThread 导致 LED/蜂鸣器冻结 */
 	if (api.lorawan.send(len, (uint8_t *)data, fport, confirmed, 3)) {
+		tx_busy = true;  /* TX 已提交, 等待 send_cb 清除 */
 		return true;
 	}
 	SEGGER_RTT_printf(0, "[LORA] send FAIL fport=%d len=%d (radio busy)\r\n", fport, len);

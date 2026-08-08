@@ -16,6 +16,7 @@
 #include "../app/actuator_mgr.h"
 #include "../app/power_mgr.h"
 #include "../app/app_hal.h"
+#include "../config/config_store.h"
 #include "../proto/proto_internal.h"
 #include "../ble/ble_badge_scan.h"
 #include "../drv/gps_drv.h"
@@ -24,6 +25,7 @@
 #if OLED_ENABLE
 #include "../drv/oled_drv.h"
 #endif
+#include "../drv/led_strip.h"
 
 extern "C" int SEGGER_RTT_printf(unsigned, const char*, ...);
 
@@ -49,6 +51,11 @@ static bool     device_enabled = true;
 /* ── OLED 自动熄屏 ── */
 #if OLED_ENABLE
 static uint32_t ui_lcd_wake_ms;       /* OLED 最后唤醒时间 */
+
+/* CMD 0x08/0x09 LCD content cache (for line2 show/hide toggle) */
+static char lcd_line1_buf[17];        /* CMD 0x08 stored line1 */
+static char lcd_line2_buf[17];        /* CMD 0x08 stored line2 */
+static bool lcd_line2_visible;        /* CMD 0x09 line2 visibility flag */
 #endif
 
 /* ── 按键→告警映射 ── */
@@ -62,10 +69,14 @@ static const uint8_t btn_to_alarm[BTN_COUNT] = {
 /* ── 告警名称数组 (OLED 显示, 按 alarm_type 索引, 对齐 NCS) ── */
 #if OLED_ENABLE
 static const char *alarm_names[] = {
-	[ALARM_TYPE_RED - 1]    = "CODE RED",
-	[ALARM_TYPE_BLUE - 1]   = "MEDICAL",
-	[ALARM_TYPE_YELLOW - 1] = "ADMIN",
-	[ALARM_TYPE_GREEN - 1]  = "ALL CLEAR",
+	[ALARM_TYPE_RED - 1]      = "Code Red",
+	[ALARM_TYPE_BLUE - 1]     = "Medical Alert",
+	[ALARM_TYPE_YELLOW - 1]   = "Admin Alert",
+	[ALARM_TYPE_GREEN - 1]    = "All Clear",
+	[ALARM_TYPE_HOLD - 1]     = "HOLD ALERT",
+	[ALARM_TYPE_SECURE - 1]   = "SECURE ALERT",
+	[ALARM_TYPE_EVACUATE - 1] = "EVACUATE ALERT",
+	[ALARM_TYPE_SHELTER - 1]  = "SHELTER ALERT",
 };
 
 /* ── OLED 辅助: 显示两行文字 ── */
@@ -83,6 +94,73 @@ static void oled_wake(void) {
 }
 #endif
 
+/* ── 公开: 显示当前告警名称 (持久, 告警激活时防熄屏) ── */
+void badge_ui_show_alarm(void) {
+#if OLED_ENABLE
+	uint8_t type = alarm_sm_current_type();
+	if (type == 0) return;  /* 无告警, 不强制点亮 */
+
+	const char *name = (type >= 1 && type <= 8)
+		? alarm_names[type - 1] : "ALERT";
+	oled_wake();
+
+	/* Red/Blue/Yellow 第二行显示房间号 */
+	if (type == ALARM_TYPE_RED || type == ALARM_TYPE_BLUE || type == ALARM_TYPE_YELLOW) {
+		char room_line[17];
+		snprintf(room_line, sizeof(room_line), "Room %d", config_get_room_id());
+		oled_show_two_lines(name, room_line);
+	} else {
+		oled_show_two_lines(name, NULL);
+	}
+	SEGGER_RTT_printf(0, "[UI] OLED show alarm: %s (type=%d)\n", name, type);
+#endif
+}
+
+/* ── 公开: CMD 0x08 LCD Content (固定 41 字节格式) ── */
+void badge_ui_clear_display(void) {
+#if OLED_ENABLE
+	oled_clear();
+#endif
+}
+
+void badge_ui_set_lcd_content(const char *line1, const char *line2) {
+#if OLED_ENABLE
+	if (line1) {
+		strncpy(lcd_line1_buf, line1, 16);
+		lcd_line1_buf[16] = '\0';
+	} else {
+		lcd_line1_buf[0] = '\0';
+	}
+	if (line2) {
+		strncpy(lcd_line2_buf, line2, 16);
+		lcd_line2_buf[16] = '\0';
+	} else {
+		lcd_line2_buf[0] = '\0';
+	}
+	lcd_line2_visible = true;
+
+	oled_wake();
+	oled_show_two_lines(lcd_line1_buf, lcd_line2_buf);
+	SEGGER_RTT_printf(0, "[UI] LCD content: L1=\"%s\" L2=\"%s\"\n",
+		lcd_line1_buf, lcd_line2_buf);
+#endif
+}
+
+/* ── 公开: CMD 0x09 LCD Line2 显隐切换 ── */
+void badge_ui_set_lcd_line2_visible(bool visible) {
+#if OLED_ENABLE
+	lcd_line2_visible = visible;
+	if (visible) {
+		oled_wake();
+		oled_clear_line(2);
+		if (lcd_line2_buf[0]) oled_draw_string(0, 2, lcd_line2_buf);
+	} else {
+		oled_clear_line(2);  /* 仅清除 line2, line1 保持 */
+	}
+	SEGGER_RTT_printf(0, "[UI] LCD line2: %s\n", visible ? "ON" : "OFF");
+#endif
+}
+
 /* ── 告警名称 (日志用) ── */
 static const char *alarm_names_log[BTN_COUNT] = { "CODE RED", "CODE BLUE", "CODE YELLOW", "ALL CLEAR" };
 
@@ -93,7 +171,9 @@ static void ui_confirm_reset(void) {
 	ui_confirm_alarm = 0;
 }
 
-static uint8_t pending_uplink_btn = 0xFF;  /* 0xFF=无待发上行 */
+static uint8_t  pending_uplink_btn = 0xFF;  /* 0xFF=无待发上行 */
+static uint32_t pending_uplink_ms;           /* 上行请求时间 (看门狗用) */
+#define UPLINK_WATCHDOG_MS  10000            /* BLE 扫描超时强制发送 (10s) */
 
 /* ── 触发告警 + 启动 BLE 扫描 ── */
 static void ui_trigger_alert(uint8_t alarm_type, uint8_t btn_id) {
@@ -124,9 +204,11 @@ static void ui_trigger_alert(uint8_t alarm_type, uint8_t btn_id) {
 	}
 
 	actuator_mgr_sync();
+	badge_ui_show_alarm();  /* OLED 显示当前告警名称 */
 
 	ble_scan_start_alert();
 	pending_uplink_btn = btn_id;
+	pending_uplink_ms  = millis();  /* watchdog 计时起点 */
 }
 
 /* ── 发送按键上行 (BLE 扫描完成后调用) ── */
@@ -183,7 +265,8 @@ static void badge_ui_confirm_tick(void) {
 	case UI_IDLE:
 #if OLED_ENABLE
 		/* OLED 自动熄屏 (IDLE 状态超时) */
-		if (ui_lcd_wake_ms != 0 && (now - ui_lcd_wake_ms) >= LCD_WAKE_TIMEOUT_MS) {
+		if (ui_lcd_wake_ms != 0 && (now - ui_lcd_wake_ms) >= LCD_WAKE_TIMEOUT_MS
+			    && !alarm_sm_is_active()) {
 			oled_display_off();
 			ui_lcd_wake_ms = 0;
 		}
@@ -237,15 +320,22 @@ static void on_button_event(uint8_t id, enum btn_event evt) {
 	if (evt == BTN_EVENT_COMBO) {
 		ui_confirm_reset();
 		if (id == BTN_BLUE) {
-			/* Blue+Yellow 5s: Reset — 清除所有告警, 关灯关蜂鸣 */
-			SEGGER_RTT_printf(0, "[INFO] Combo: Reset (Clear All alarms)\n");
-			alarm_sm_clear_all();
-			actuator_all_off();
+				/* Blue+Yellow 5s: Reset - flash white + vibrate + LCD version (no buzzer) */
+				SEGGER_RTT_printf(0, "[INFO] Combo: Reset\n");
+				alarm_sm_clear_all();
+				/* Flash white + vibrate briefly */
+				struct led_color white = {255, 255, 255};
+				led_strip_set_all(white);
+				digitalWrite(MOTOR_PIN, HIGH);
+				delay(500);
+				led_strip_off();
+				digitalWrite(MOTOR_PIN, LOW);
+				actuator_mgr_sync();
 #if OLED_ENABLE
-			oled_wake();
-			oled_show_two_lines("CLEAR ALL ALARMS", "Return to Normal");
+				oled_wake();
+				oled_show_two_lines("Firmware Version", "V1.0");
 #endif
-		} else if (id == BTN_GREEN) {
+			} else if (id == BTN_GREEN) {
 			/* Green+Blue 5s: Device disable/re-enable */
 			device_enabled = !device_enabled;
 			SEGGER_RTT_printf(0, "[INFO] Combo: Device %s\n", device_enabled ? "ENABLED" : "DISABLED");
@@ -327,10 +417,17 @@ void badge_ui_poll(void) {
 	button_sm_poll();
 	badge_ui_confirm_tick();
 
-	/* BLE 扫描完成后发送按键上行 */
-	if (pending_uplink_btn != 0xFF && !ble_scan_active()) {
-		SEGGER_RTT_printf(0, "[INFO] send key event uplink\n");
-		send_key_event_uplink(pending_uplink_btn);
-		pending_uplink_btn = 0xFF;
+	/* BLE 扫描完成后发送按键上行 (watchdog: 超时 10s 强制发送, 避免 BLE 异常卡死) */
+	if (pending_uplink_btn != 0xFF) {
+		bool scan_done = !ble_scan_active();
+		bool timed_out = (millis() - pending_uplink_ms) >= UPLINK_WATCHDOG_MS;
+		if (scan_done || timed_out) {
+			if (timed_out && !scan_done) {
+				SEGGER_RTT_printf(0, "[WARN] Uplink watchdog timeout — sending without BLE location\n");
+			}
+			SEGGER_RTT_printf(0, "[INFO] send key event uplink\n");
+			send_key_event_uplink(pending_uplink_btn);
+			pending_uplink_btn = 0xFF;
+		}
 	}
 }

@@ -68,39 +68,43 @@ static void on_lora_downlink(uint8_t port, const uint8_t *data, uint8_t len) {
 	proto_parser_parse(data, len);
 }
 
-/* ── 上行函数 ── */
-static void send_heartbeat(void) {
+/* ── 上行函数 (返回 true=发送成功) ── */
+static bool send_heartbeat(void) {
 	uint8_t buf[64];
 	int len = proto_build_heartbeat(buf, sizeof(buf),
 		DEV_TYPE_HUB, config_get_group_id());
 	if (len <= 0) {
 		SEGGER_RTT_printf(0, "[WARN] Heartbeat build failed\n");
-		return;
+		return false;
 	}
 	if (app_hal_send(FPORT_HUB_UP, buf, len, false)) {
 		SEGGER_RTT_printf(0, "[INFO] Heartbeat sent (%d bytes)\n", len);
+		return true;
 	} else {
 		SEGGER_RTT_printf(0, "[WARN] Heartbeat send failed! joined=%d len=%d\n",
 			app_hal_is_joined(), len);
+		return false;
 	}
 }
 
-static void send_power_report(void) {
+static bool send_power_report(void) {
 	uint8_t pct = power_mgr_get_battery_pct();
-	if (abs((int)pct - (int)last_power_pct) < POWER_REPORT_DELTA_PCT) return;
+	if (abs((int)pct - (int)last_power_pct) < POWER_REPORT_DELTA_PCT) return false;
 
 	uint8_t buf[64];
 	int len = proto_build_power(buf, sizeof(buf), DEV_TYPE_HUB, pct);
 	if (len <= 0) {
 		SEGGER_RTT_printf(0, "[WARN] Power report build failed\n");
-		return;
+		return false;
 	}
-	if (app_hal_send(FPORT_COMMON, buf, len, false)) {
+	if (app_hal_send(FPORT_HUB_UP, buf, len, false)) {
 		last_power_pct = pct;
 		SEGGER_RTT_printf(0, "[INFO] Power report: %d%% (%d bytes)\n", pct, len);
+		return true;
 	} else {
 		SEGGER_RTT_printf(0, "[WARN] Power report send failed! joined=%d\n",
 			app_hal_is_joined());
+		return false;
 	}
 }
 
@@ -149,13 +153,14 @@ int loraThread(struct rt *rt) {
 		RT_YIELD(rt);
 
 		if (g_heartbeat_pending) {
-			g_heartbeat_pending = false;
-			send_heartbeat();
-		}
-		if (g_power_report_pending) {
-			g_power_report_pending = false;
+			if (send_heartbeat()) {
+				g_heartbeat_pending = false;
+			}
+		} else if (g_power_report_pending) {
 			power_mgr_update();
-			send_power_report();
+			if (send_power_report()) {
+				g_power_report_pending = false;
+			}
 		}
 
 		/* 心跳日志 (10s) — 确认系统活跃, 驱动 Beacon 状态机 */
@@ -202,6 +207,48 @@ int actuatorThread(struct rt *rt) {
 }
 
 /* ══════════════════════════════════════════════════════════
+ * LED/蜂鸣器硬件自检 (编译开关 LED_SELF_TEST)
+ * ══════════════════════════════════════════════════════════ */
+#if LED_SELF_TEST
+static void led_strip_self_test(void)
+{
+	struct led_color red   = {255,   0,   0};
+	struct led_color green = {  0, 255,   0};
+	struct led_color blue  = {  0,   0, 255};
+	struct led_color white = { 64,  64,  64};
+
+	/* 使能 LED 供电 */
+	pinMode(LED_PWR_PIN, OUTPUT);
+	digitalWrite(LED_PWR_PIN, HIGH);
+	delay(10);
+
+	SEGGER_RTT_printf(0, "[SELFTEST] Red\r\n");
+	led_strip_set_all(red);
+	delay(300);
+
+	SEGGER_RTT_printf(0, "[SELFTEST] Green\r\n");
+	led_strip_set_all(green);
+	delay(300);
+
+	SEGGER_RTT_printf(0, "[SELFTEST] Blue\r\n");
+	led_strip_set_all(blue);
+	delay(300);
+
+	SEGGER_RTT_printf(0, "[SELFTEST] White (low brightness)\r\n");
+	led_strip_set_all(white);
+	delay(300);
+
+	SEGGER_RTT_printf(0, "[SELFTEST] Buzzer\r\n");
+	buzzer_pwm_set(BUZZER_ON, 5, 200, 0);
+	delay(200);
+	buzzer_pwm_off();
+
+	SEGGER_RTT_printf(0, "[SELFTEST] Done — all off\r\n");
+	led_strip_off();
+}
+#endif
+
+/* ══════════════════════════════════════════════════════════
  * setup()
  * ══════════════════════════════════════════════════════════ */
 void setup() {
@@ -239,13 +286,13 @@ void setup() {
 	fuota_init();  /* 注册 FUOTA 回调 */
 	SEGGER_RTT_printf(0, "=== STEP 1 done (no reboot) ===\n");
 
-	/* 2. 协议引擎 */
-	SEGGER_RTT_printf(0, "=== STEP 2: proto init ===\n");
-	proto_engine_init();
-
-	/* 3. Flash 配置 (必须在 actuator_mgr_init 之前) */
-	SEGGER_RTT_printf(0, "=== STEP 3: config_store_init ===\n");
+	/* 2. Flash 配置 (必须在 proto_engine_init 之前) */
+	SEGGER_RTT_printf(0, "=== STEP 2: config_store_init ===\n");
 	config_store_init();
+
+	/* 3. 协议引擎 */
+	SEGGER_RTT_printf(0, "=== STEP 3: proto init ===\n");
+	proto_engine_init();
 
 	/* 4. 告警 + 执行器 */
 	SEGGER_RTT_printf(0, "=== STEP 4: alarm/actuator init ===\n");
@@ -261,6 +308,15 @@ void setup() {
 	led_strip_init();  /* PWM+DMA mode, no SoftDevice conflict */
 	SEGGER_RTT_printf(0, "=== STEP 6: buzzer_pwm_init ===\n");
 	buzzer_pwm_init();
+
+#if LED_SELF_TEST
+	/* 5a. LED/蜂鸣器硬件自检: 红→绿→蓝→白→蜂鸣器→灭
+	 *     仅首次上电运行 (闪存无有效 identity 时), 已有 identity 则跳过 */
+	if (!device_identity_is_from_flash()) {
+		SEGGER_RTT_printf(0, "=== STEP 5a: LED/Buzzer self-test ===\n");
+		led_strip_self_test();
+	}
+#endif
 
 	/* 6. 设备信息 */
 	SEGGER_RTT_printf(0, "Hub type=%d group=0x%02X room=%d\n",

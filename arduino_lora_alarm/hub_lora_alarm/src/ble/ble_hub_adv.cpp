@@ -16,6 +16,7 @@
 #include "ble_hub_adv.h"
 #include "../proto/proto_internal.h"
 #include "../boards/hub/board.h"
+#include "../config/config_store.h"
 
 /* SEGGER_RTT 直写 — 绕过 NRF_LOG backend */
 extern "C" {
@@ -72,7 +73,7 @@ static void build_adv_data(void) {
 
 	/* Device type + Room ID */
 	*p++ = DEV_TYPE_HUB;
-	*p++ = DEVICE_ROOM_ID;
+	*p++ = config_get_room_id();
 
 	adv_len = p - adv_payload;
 }

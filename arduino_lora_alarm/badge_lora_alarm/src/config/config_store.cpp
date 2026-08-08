@@ -2,7 +2,7 @@
 /*
  * 配置持久化 — Flash + CRC32, RUI3 简化版
  * 存储: group_id/device_type/hub_type/room_id + alarm_config (CMD 0x04)
- * 偏移重映射至 RUI3 用户 Flash 区 (api.system.flash 基址 0x70000)
+ * 偏移重映射至 RUI3 用户 Flash 区 (api.system.flash 基址 0xB0000 = MCU_USER_DATA_NVM_ADDR)
  */
 #include <Arduino.h>
 #include <string.h>
@@ -15,7 +15,7 @@ extern "C" int SEGGER_RTT_printf(unsigned, const char*, ...);
 #define CONFIG_MAGIC     0x4C4F5241  /* "LORA" */
 #define CONFIG_VERSION   2           /* V2: 增加 alarm_config */
 
-/* RUI3 用户 Flash 相对偏移 (基址 0x70000) */
+/* RUI3 用户 Flash 相对偏移 (基址 0xB0000 = MCU_USER_DATA_NVM_ADDR) */
 #define CONFIG_PRIMARY_OFFSET   0x00000
 #define CONFIG_BACKUP1_OFFSET   0x01000
 #define CONFIG_BACKUP2_OFFSET   0x02000
